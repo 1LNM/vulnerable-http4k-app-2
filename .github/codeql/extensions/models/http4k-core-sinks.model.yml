@@ -1,0 +1,35 @@
+extensions:
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sinkModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, INPUT, KIND, provenance
+
+      # --- Response.header(name, value) - url-redirection when setting Location header ---
+      - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
+
+      # --- Response.body(String) - reflected XSS via string body ---
+      - ["org.http4k.core", "Response", true, "body", "(String)", "", "Argument[0]", "xss", "manual"]
+
+      # --- Response.body(Body) - reflected XSS via Body object ---
+      - ["org.http4k.core", "Response", true, "body", "(Body)", "", "Argument[0]", "xss", "manual"]
+
+      # --- Extension functions: header.kt -> HeaderKt ---
+      - ["org.http4k.lens", "HeaderKt", false, "html", "", "", "Argument[1]", "xss", "manual"]
+      - ["org.http4k.lens", "HeaderKt", false, "location", "", "", "Argument[1]", "url-redirection", "manual"]
+
+      # --- Additional Response sinks ---
+      - ["org.http4k.core", "Response", true, "replaceHeader", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
+      - ["org.http4k.core", "Response", true, "body", "(InputStream,Long)", "", "Argument[0]", "xss", "manual"]
+
+      # --- Request query manipulation with tainted values ---
+      - ["org.http4k.core", "Request", true, "query", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
+
+      # --- ResourceLoader.load(path) - path-injection sink ---
+      - ["org.http4k.routing", "ResourceLoader", true, "load", "(String)", "", "Argument[0]", "path-injection", "manual"]
+
+      # --- Request.uri(Uri) - SSRF sink when setting tainted URI on request ---
+      - ["org.http4k.core", "Request", true, "uri", "(Uri)", "", "Argument[0]", "request-forgery", "manual"]
+
+      # --- UriTemplate.generate(Map) - URL injection via template parameters ---
+      - ["org.http4k.core", "UriTemplate", false, "generate", "", "", "Argument[0]", "url-redirection", "manual"]

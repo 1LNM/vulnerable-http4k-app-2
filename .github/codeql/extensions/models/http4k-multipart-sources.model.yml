@@ -1,0 +1,36 @@
+extensions:
+  # --- Multipart form field/file property accessors (sources) ---
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sourceModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, OUTPUT, KIND, provenance
+
+      # MultipartFormField (data class in org.http4k.lens)
+      - ["org.http4k.lens", "MultipartFormField", false, "getValue", "()", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "MultipartFormField", false, "getHeaders", "()", "", "ReturnValue", "remote", "manual"]
+
+      # MultipartFormFile (data class in org.http4k.lens)
+      - ["org.http4k.lens", "MultipartFormFile", false, "getFilename", "()", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "MultipartFormFile", false, "getContent", "()", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "MultipartFormFile", false, "getContentType", "()", "", "ReturnValue", "remote", "manual"]
+
+      # MultipartEntity.Field
+      - ["org.http4k.core", "MultipartEntity$Field", false, "getValue", "()", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.core", "MultipartEntity$Field", false, "getName", "()", "", "ReturnValue", "remote", "manual"]
+
+      # MultipartEntity.File
+      - ["org.http4k.core", "MultipartEntity$File", false, "getFile", "()", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.core", "MultipartEntity$File", false, "getName", "()", "", "ReturnValue", "remote", "manual"]
+
+  # --- Multipart body accessors (summaries - column order is correct) ---
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      - ["org.http4k.core", "MultipartFormBody", false, "field", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "MultipartFormBody", false, "fields", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "MultipartFormBody", false, "file", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "MultipartFormBody", false, "files", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "MultipartFormBody", false, "fieldValue", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "MultipartFormBody", false, "fieldValues", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]

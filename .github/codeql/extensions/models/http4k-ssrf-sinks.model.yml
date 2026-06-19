@@ -1,0 +1,17 @@
+extensions:
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sinkModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, INPUT, KIND, provenance
+
+      # --- Uri methods that accept tainted input for URI construction (SSRF) ---
+      - ["org.http4k.core", "Uri", false, "extend", "", "", "Argument[0]", "request-forgery", "manual"]
+      - ["org.http4k.core", "Uri", false, "relative", "(String)", "", "Argument[0]", "request-forgery", "manual"]
+      - ["org.http4k.core", "Uri", false, "appendToPath", "(String)", "", "Argument[0]", "request-forgery", "manual"]
+
+      # --- Request factory with tainted URI (SSRF) ---
+      - ["org.http4k.core", "Request$Companion", false, "invoke", "", "", "Argument[1]", "request-forgery", "manual"]
+
+      # --- Request.uri(Uri) - modifying an existing request's URI ---
+      - ["org.http4k.core", "Request", true, "uri", "(Uri)", "", "Argument[0]", "request-forgery", "manual"]
