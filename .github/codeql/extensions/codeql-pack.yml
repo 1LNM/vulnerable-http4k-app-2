@@ -1,0 +1,6 @@
+name: 1lnm/http4k-models
+version: 0.0.0
+extensionTargets:
+  codeql/java-all: "*"
+dataExtensions:
+  - "*.model.yml"
