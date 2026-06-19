@@ -1,0 +1,17 @@
+extensions:
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # --- AutoMarshalling (abstract class in org.http4k.format) ---
+      # asA(String, KClass) - deserialize string to typed object
+      - ["org.http4k.format", "AutoMarshalling", true, "asA", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # asInputStream(Any) - serialize object to InputStream (reverse direction, but taint propagates)
+      - ["org.http4k.format", "AutoMarshalling", true, "asInputStream", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # asFormatString(Any) - serialize object to String
+      - ["org.http4k.format", "AutoMarshalling", true, "asFormatString", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # convert(IN) - convert between types via serialization round-trip
+      - ["org.http4k.format", "AutoMarshalling", true, "convert", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
