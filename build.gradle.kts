@@ -10,7 +10,7 @@ repositories {
     mavenCentral()
 }
 
-val http4kVersion = "6.53.0.0"
+val http4kVersion = "6.52.0.0"
 
 dependencies {
     implementation("org.http4k:http4k-core:$http4kVersion")
