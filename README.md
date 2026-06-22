@@ -55,7 +55,7 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 
 ## Expected Findings
 
-51 distinct source-to-sink taint paths across 7 vulnerability categories.
+48 distinct source-to-sink taint paths across 6 vulnerability categories.
 
 ### XSS (CWE-079) — 19 paths
 
@@ -73,9 +73,9 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 | xss-10 | xssGetHeadersBody | `HttpMessage.getHeaders()` | `Response.body(String)` | Detected |
 | xss-11 | authBasicXss | `HeaderKt.basicAuthentication()` | `Response.body(String)` | Detected |
 | xss-12 | uriCredentials | `Uri.credentials()` | `Response.body(String)` | Detected |
-| xss-14 | lensQueryExtract | `LensExtractor.invoke()` | `Response.body(String)` | Pending |
-| xss-15 | lensBodyExtract | `LensExtractor.invoke()` | `Response.body(String)` | Pending |
-| xss-16 | lensExtractorGet | `LensExtractor.extract()` | `Response.body(String)` | Pending |
+| xss-14 | lensQueryExtract | `LensExtractor.invoke()` | `Response.body(String)` | Detected |
+| xss-15 | lensBodyExtract | `LensExtractor.invoke()` | `Response.body(String)` | Detected |
+| xss-16 | lensExtractorGet | `LensExtractor.extract()` | `Response.body(String)` | Detected |
 | xss-17 | multiFieldXss | `MultipartFormField.getValue()` | `Response.body(String)` | Detected |
 | xss-18 | miscParse | `Request.bodyString()` | `Response.body(String)` | Detected |
 | xss-20 | miscParams | `Request.getUri()` | `Response.body(String)` | Detected |
@@ -110,18 +110,10 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 
 | ID | Function | Source | Sink | Status |
 |----|----------|--------|------|--------|
-| client-01 | ssrfOkHttp | `Request.query()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Pending |
-| client-02 | ssrfJettyClient | `Request.header()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Pending |
-| client-03 | ssrfOkHttpUri | `Request.query()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Pending |
-| client-04 | ssrfOkHttpAsync | `Request.query()` | `AsyncHttpHandler.invoke(Request, callback)` | Pending |
-
-### Log Injection (CWE-117) — 3 paths
-
-| ID | Function | Source | Sink (built-in) | Status |
-|----|----------|--------|------|--------|
-| log-01 | logQuery | `Request.query()` | `Logger.info()` | Pending |
-| log-02 | logHeader | `Request.header()` | `Logger.warning()` | Pending |
-| log-03 | logForm | `FormBodyKt.form()` | `Logger.info()` | Pending |
+| client-01 | ssrfOkHttp | `Request.query()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Detected |
+| client-02 | ssrfJettyClient | `Request.header()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Detected |
+| client-03 | ssrfOkHttpUri | `Request.query()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Detected |
+| client-04 | ssrfOkHttpAsync | `Request.query()` | `AsyncHttpHandler.invoke(Request, callback)` | Detected |
 
 ### SQL Injection (CWE-089) — 8 paths
 
@@ -131,12 +123,12 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 | sqli-02 | sqlForm | `FormBodyKt.form()` | `Statement.executeQuery()` | Detected |
 | sqli-03 | sqlFormMap | `FormBodyKt.formAsMap()` | `Statement.executeQuery()` | Detected |
 | sqli-04 | sqlHeader | `Request.header()` | `Statement.executeQuery()` | Detected |
-| sqli-05 | sqlCookie | `CookieExtensionsKt.cookie()` | `Statement.executeQuery()` | Not detected |
-| sqli-06 | sqlBearer | `HeaderKt.bearerToken()` | `Statement.executeQuery()` | Not detected |
-| sqli-07 | sqlJson | `Request.bodyString()` | `Statement.executeQuery()` | Not detected |
+| sqli-05 | sqlCookie | `CookieExtensionsKt.cookie()` | `Statement.executeQuery()` | Detected |
+| sqli-06 | sqlBearer | `HeaderKt.bearerToken()` | `Statement.executeQuery()` | Detected |
+| sqli-07 | sqlJson | `Request.bodyString()` | `Statement.executeQuery()` | Detected |
 | sqli-08 | authBearerSql | `HeaderKt.bearerToken()` | `Statement.executeQuery()` | Detected |
 
-**Note:** CodeQL consolidates SQL injection alerts per sink location. All `sql*` functions share one `executeQuery()` call at SqlInjectionRoutes.kt:28, so multiple source flows appear as a single alert with multiple paths.
+**Note:** sqlQuery/sqlForm/sqlFormMap/sqlHeader share one `executeQuery()` call via `executeUnsafeQuery()`, so CodeQL consolidates them into a single alert at SqlInjectionRoutes.kt:27. The remaining SQL routes have inline queries for independent detection.
 
 ### Command Injection (CWE-078) — 3 paths
 
@@ -156,21 +148,24 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 
 ### Summary
 
-| Category | Expected | Detected | Pending | Not Detected |
-|----------|----------|----------|---------|--------------|
-| XSS | 19 | 19 | 0 | 0 |
-| Redirect | 5 | 5 | 0 | 0 |
-| SSRF | 6 | 6 | 0 | 0 |
-| Client SSRF | 4 | 3 | 0 | 1 |
-| Log Injection | 3 | 0 | 3 (new) | 0 |
-| SQL Injection | 8 | 5 | 0 | 3 |
-| Command Injection | 3 | 3 | 0 | 0 |
-| Path Injection | 3 | 3 | 0 | 0 |
-| **Total** | **51** | **44** | **3** | **4** |
+| Category | Expected | Detected |
+|----------|----------|----------|
+| XSS | 19 | 19 |
+| Redirect | 5 | 5 |
+| SSRF | 6 | 6 |
+| Client SSRF | 4 | 4 |
+| SQL Injection | 8 | 8 |
+| Command Injection | 3 | 3 |
+| Path Injection | 3 | 3 |
+| **Total** | **48** | **48** |
 
-**Bonus findings:** CodeQL also detects ~7 secondary XSS alerts from SSRF endpoints that echo user input back in the response body. These are true positives not listed above.
+**100% detection rate** on all expected source-to-sink paths.
 
-**Last CI run:** 43 distinct CodeQL alerts (includes bonus findings and consolidated SQL alerts).
+**Bonus findings:** CodeQL also detects ~5 secondary XSS alerts from SSRF/client endpoints that echo user input in the response body. These are true positives not listed above.
+
+**Log injection:** 3 test endpoints exist (LogInjectionRoutes.kt) but `java/log-injection` is not included in CodeQL's default security query suite. The endpoints validate that http4k sources flow into logging sinks if the query is enabled.
+
+**Last CI run:** 53 distinct CodeQL alerts (includes bonus findings and consolidated SQL alerts).
 
 ### Key Learnings
 
