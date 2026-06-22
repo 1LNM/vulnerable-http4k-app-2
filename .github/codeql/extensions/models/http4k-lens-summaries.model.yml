@@ -1,17 +1,27 @@
 extensions:
+  # --- Lens extraction as remote sources ---
+  # Lenses are the idiomatic way to extract user input in http4k.
+  # Lens.invoke(request) / extract(request) pull untrusted data from HTTP messages.
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sourceModel
+    data:
+      # LensExtractor.invoke/extract — covers Lens, BodyLens, PathLens, and all Bi variants
+      - ["org.http4k.lens", "LensExtractor", true, "invoke", "", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "LensExtractor", true, "extract", "", "", "ReturnValue", "remote", "manual"]
+
+  # --- Lens taint propagation summaries ---
   - addsTo:
       pack: codeql/java-all
       extensible: summaryModel
     data:
       # --- BodyLens.invoke(target) - extracts typed body from HttpMessage ---
-      # BodyLens extends Lens but has its own invoke with content-type negotiation
       - ["org.http4k.lens", "BodyLens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # --- PathLens.invoke(target) - extracts typed path segment from Request ---
       - ["org.http4k.lens", "PathLens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # --- BiDiLens.invoke(value, target) - injects value into target ---
-      # 2-arg invoke: value flows into the returned modified target
       - ["org.http4k.lens", "BiDiLens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # --- LensExtractor interface - generic extraction ---
@@ -19,6 +29,5 @@ extensions:
       - ["org.http4k.lens", "LensExtractor", true, "extract", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # --- LensInjector interface - generic injection ---
-      # invoke(value, target) - value taint propagates to returned target
       - ["org.http4k.lens", "LensInjector", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.lens", "LensInjector", true, "inject", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
