@@ -86,7 +86,14 @@ fun main() {
         // Log Injection
         "/log/query" bind GET to ::logQuery,
         "/log/header" bind GET to ::logHeader,
-        "/log/form" bind POST to ::logForm
+        "/log/form" bind POST to ::logForm,
+
+        // Response Splitting
+        "/split/header-name" bind GET to ::splitHeaderName,
+        "/split/header-value" bind GET to ::splitHeaderValue,
+
+        // Lens Injection
+        "/lens/inject-xss" bind GET to ::lensInjectXss
     )
 
     val server = app.asServer(Netty(8080)).start()

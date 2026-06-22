@@ -38,3 +38,6 @@ extensions:
       - ["org.http4k.core", "MultipartFormBody", false, "files", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "MultipartFormBody", false, "fieldValue", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "MultipartFormBody", false, "fieldValues", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- MultipartFormBody.from(Request) — factory creates body from request ---
+      - ["org.http4k.core", "MultipartFormBody$Companion", false, "from", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

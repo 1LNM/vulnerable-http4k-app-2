@@ -61,6 +61,10 @@ extensions:
       - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
       - ["org.http4k.core", "Response", true, "replaceHeader", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
 
+      # --- Response header injection (response-splitting) — header name AND value ---
+      - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[0]", "response-splitting", "manual"]
+      - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[1]", "response-splitting", "manual"]
+
       # --- Request query manipulation ---
       - ["org.http4k.core", "Request", true, "query", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
 
@@ -95,6 +99,13 @@ extensions:
       - ["org.http4k.core", "Uri", false, "getFragment", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "Uri", false, "getUserInfo", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "Uri", false, "getAuthority", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Uri.toString — taint flows from Uri to its string representation ---
+      - ["org.http4k.core", "Uri", false, "toString", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Uri.copy — data class copy preserves taint from all components ---
+      - ["org.http4k.core", "Uri", false, "copy", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "Uri", false, "copy", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # --- Uri.of(String) — factory on companion ---
       - ["org.http4k.core", "Uri$Companion", false, "of", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]

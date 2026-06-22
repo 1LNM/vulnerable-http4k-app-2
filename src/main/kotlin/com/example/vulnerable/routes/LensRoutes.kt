@@ -1,6 +1,7 @@
 package com.example.vulnerable.routes
 
 import org.http4k.core.*
+import org.http4k.lens.Header
 import org.http4k.lens.Query
 import org.http4k.lens.BiDiBodyLens
 import org.http4k.lens.string
@@ -30,4 +31,11 @@ fun lensExtractorGet(request: Request): Response {
     return Response(Status.OK)
         .header("Content-Type", "text/html")
         .body("<html><body>Search: $value</body></html>")
+}
+
+// Source: Request.query() → Sink: LensInjector.inject(tainted, Response) — XSS via lens inject
+fun lensInjectXss(request: Request): Response {
+    val userInput = request.query("value") ?: "default"
+    val headerLens = Header.required("X-Injected")
+    return headerLens.inject(userInput, Response(Status.OK).body("Injected"))
 }
