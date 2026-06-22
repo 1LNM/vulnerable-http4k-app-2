@@ -12,11 +12,12 @@ Test application for validating [CodeQL MaD (Models as Data)](https://codeql.git
 ## Project Structure
 
 ```
+CLAUDE.md                        # Modelling reference, design decisions, format docs
 .github/
   codeql/extensions/models/     # 8 custom MaD model YAML files (by module)
   workflows/codeql.yml          # CodeQL CI workflow (build-mode: manual)
 src/main/kotlin/com/example/vulnerable/
-  App.kt                        # Route registration (~50 endpoints)
+  App.kt                        # Route registration (56 endpoints)
   model/UserInput.kt            # Data class for JSON deserialization tests
   routes/
     XssRoutes.kt                # 10 endpoints - reflected XSS
