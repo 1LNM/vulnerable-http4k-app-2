@@ -26,12 +26,13 @@ src/main/kotlin/com/example/vulnerable/
     SqlInjectionRoutes.kt       #  7 endpoints - SQL injection
     CommandInjectionRoutes.kt   #  3 endpoints - command injection
     MultipartRoutes.kt          #  2 endpoints - multipart source coverage
-    LensRoutes.kt               #  3 endpoints - lens extraction chains
+    LensRoutes.kt               #  4 endpoints - lens extraction + injection chains
     HeaderRoutes.kt             #  2 endpoints - auth header sources
     UriRoutes.kt                #  2 endpoints - URI/RequestSource sources
     MiscRoutes.kt               #  4 endpoints - parse, curl, params, JSON
     ClientSsrfRoutes.kt         #  4 endpoints - HTTP client SSRF
     LogInjectionRoutes.kt       #  3 endpoints - log injection
+    ResponseSplittingRoutes.kt  #  2 endpoints - HTTP response splitting
 ```
 
 ## Custom Model Files
@@ -40,22 +41,22 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 
 | File | Entries | Coverage |
 |------|---------|----------|
-| `http4k-core.model.yml` | 99 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks |
-| `http4k-lens.model.yml` | 16 | LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), Lens/BodyLens/PathLens/LensInjector summaries |
+| `http4k-core.model.yml` | 104 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, response-splitting sinks, Uri.toString/copy summaries |
+| `http4k-lens.model.yml` | 17 | LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries |
 | `http4k-routing.model.yml` | 3 | ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot sanitizer |
 | `http4k-filter.model.yml` | 1 | ServerFilters.CatchAll stack trace leak |
-| `http4k-multipart.model.yml` | 15 | MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody |
+| `http4k-multipart.model.yml` | 16 | MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody, MultipartFormBody.from summary |
 | `http4k-format.model.yml` | 6 | AutoMarshalling asA/stringAsA/asFormatString/convert, Json.parse |
 | `http4k-realtime.model.yml` | 6 | WsMessage body, SseMessage Data/Event |
 | `http4k-client.model.yml` | 3 | DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks |
 
-**Total: 149 model entries** (consolidated from 10 files, deduplicated 1 duplicate sink).
+**Total: 156 model entries.**
 
 ## Expected Findings
 
-48 distinct source-to-sink taint paths across 6 vulnerability categories.
+52 distinct source-to-sink taint paths across 8 vulnerability categories.
 
-### XSS (CWE-079) — 19 paths
+### XSS (CWE-079) — 20 paths
 
 | ID | Function | Source | Sink | Status |
 |----|----------|--------|------|--------|
@@ -74,8 +75,9 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 | xss-14 | lensQueryExtract | `LensExtractor.invoke()` | `Response.body(String)` | Detected |
 | xss-15 | lensBodyExtract | `LensExtractor.invoke()` | `Response.body(String)` | Detected |
 | xss-16 | lensExtractorGet | `LensExtractor.extract()` | `Response.body(String)` | Detected |
-| xss-17 | multiFieldXss | `MultipartFormField.getValue()` | `Response.body(String)` | Detected |
-| xss-18 | miscParse | `Request.bodyString()` | `Response.body(String)` | Detected |
+| xss-17 | lensInjectXss | `Request.query()` | `LensInjector.inject()` | Detected |
+| xss-18 | multiFieldXss | `MultipartFormField.getValue()` | `Response.body(String)` | Detected |
+| xss-19 | miscParse | `Request.bodyString()` | `Response.body(String)` | Detected |
 | xss-20 | miscParams | `Request.getUri()` | `Response.body(String)` | Detected |
 | xss-21 | miscJsonConvert | `Request.bodyString()` | `Response.body(String)` | Detected |
 
@@ -83,7 +85,7 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 - xss-13 (uriRequestSource): `RequestSource` is modelled as `local` source, not `remote` — CodeQL correctly does not flag it as XSS
 - xss-19 (miscCurl): Requires the `Request` object itself to carry taint, which CodeQL doesn't support (only method return values are tainted)
 
-### URL Redirect (CWE-601) — 5 paths
+### URL Redirect (CWE-601) — 6 paths
 
 | ID | Function | Source | Sink | Status |
 |----|----------|--------|------|--------|
@@ -92,6 +94,16 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 | redirect-03 | redirectLocation | `Request.query()` | `HeaderKt.location()` | Detected |
 | redirect-04 | redirectTemplate | `Request.query()` | `Response.header(Location)` | Detected |
 | redirect-05 | redirectCookieSrc | `CookieExtensionsKt.cookie()` | `Response.header(Location)` | Detected |
+| redirect-06 | splitHeaderValue | `Request.query()` | `Response.header(name, tainted)` | Detected |
+
+### HTTP Response Splitting (CWE-113) — 2 paths
+
+| ID | Function | Source | Sink | Status |
+|----|----------|--------|------|--------|
+| split-01 | splitHeaderName | `Request.query()` | `Response.header(tainted, value)` | Detected |
+| split-02 | splitHeaderValue | `Request.query()` | `Response.header(name, tainted)` | Detected |
+
+**Bonus findings:** CodeQL also detects response-splitting on 3 existing redirect endpoints (redirectHeader, redirectTemplate, redirectCookieSrc) since `Response.header` value is now also a response-splitting sink.
 
 ### SSRF / Request Forgery (CWE-918) — 6 paths
 
@@ -148,22 +160,23 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 
 | Category | Expected | Detected |
 |----------|----------|----------|
-| XSS | 19 | 19 |
-| Redirect | 5 | 5 |
+| XSS | 20 | 20 |
+| Redirect | 6 | 6 |
+| Response Splitting | 2 | 2 |
 | SSRF | 6 | 6 |
 | Client SSRF | 4 | 4 |
 | SQL Injection | 8 | 8 |
 | Command Injection | 3 | 3 |
 | Path Injection | 3 | 3 |
-| **Total** | **48** | **48** |
+| **Total** | **52** | **52** |
 
 **100% detection rate** on all expected source-to-sink paths.
 
-**Bonus findings:** CodeQL also detects ~5 secondary XSS alerts from SSRF/client endpoints that echo user input in the response body. These are true positives not listed above.
+**Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS), and from redirect endpoints that also match response-splitting. These are true positives not listed above.
 
 **Log injection:** 3 test endpoints exist (LogInjectionRoutes.kt) but `java/log-injection` is not included in CodeQL's default security query suite. The endpoints validate that http4k sources flow into logging sinks if the query is enabled.
 
-**Last CI run:** 53 distinct CodeQL alerts (includes bonus findings and consolidated SQL alerts).
+**Last CI run:** 60 distinct CodeQL alerts (includes bonus findings and consolidated SQL alerts).
 
 ### Key Learnings
 
