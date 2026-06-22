@@ -1,0 +1,30 @@
+extensions:
+  # ============================================================
+  # Sources
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sourceModel
+    data:
+      # Request.path(name) — extract path parameter (extensions.kt → ExtensionsKt)
+      - ["org.http4k.routing", "ExtensionsKt", false, "path", "", "", "ReturnValue", "remote", "manual"]
+
+  # ============================================================
+  # Sinks
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sinkModel
+    data:
+      # ResourceLoader.load(path) — path-injection sink
+      - ["org.http4k.routing", "ResourceLoader", true, "load", "(String)", "", "Argument[0]", "path-injection", "manual"]
+
+  # ============================================================
+  # Summaries
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # resolvedWithinRoot() — path sanitization (resourcePath.kt → ResourcePathKt)
+      - ["org.http4k.routing", "ResourcePathKt", false, "resolvedWithinRoot", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

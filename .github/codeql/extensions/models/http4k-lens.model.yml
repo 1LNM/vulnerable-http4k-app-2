@@ -1,0 +1,63 @@
+extensions:
+  # ============================================================
+  # Sources — lens extraction as remote data entry points
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sourceModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, OUTPUT, KIND, provenance
+
+      # --- LensExtractor.invoke/extract — covers Lens, BodyLens, PathLens, all BiDi variants ---
+      - ["org.http4k.lens", "LensExtractor", true, "invoke", "", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "LensExtractor", true, "extract", "", "", "ReturnValue", "remote", "manual"]
+
+      # --- Auth header extensions (header.kt → HeaderKt) ---
+      - ["org.http4k.lens", "HeaderKt", false, "bearerToken", "", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "HeaderKt", false, "basicAuthentication", "", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "HeaderKt", false, "accept", "", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.lens", "HeaderKt", false, "contentType", "", "", "ReturnValue", "remote", "manual"]
+
+  # ============================================================
+  # Sinks — header extension sinks
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sinkModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, INPUT, KIND, provenance
+
+      # --- HeaderKt.html() — XSS sink ---
+      - ["org.http4k.lens", "HeaderKt", false, "html", "", "", "Argument[1]", "html-injection", "manual"]
+
+      # --- HeaderKt.location() — open redirect sink ---
+      - ["org.http4k.lens", "HeaderKt", false, "location", "", "", "Argument[1]", "url-redirection", "manual"]
+
+  # ============================================================
+  # Summaries — lens taint propagation
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- Lens.invoke(target) — generic extraction ---
+      - ["org.http4k.lens", "Lens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- BodyLens.invoke(target) ---
+      - ["org.http4k.lens", "BodyLens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- PathLens.invoke(target) ---
+      - ["org.http4k.lens", "PathLens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- BiDiLens.invoke(value, target) — injects value into target ---
+      - ["org.http4k.lens", "BiDiLens", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- LensExtractor interface ---
+      - ["org.http4k.lens", "LensExtractor", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.lens", "LensExtractor", true, "extract", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- LensInjector interface ---
+      - ["org.http4k.lens", "LensInjector", true, "invoke", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.lens", "LensInjector", true, "inject", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

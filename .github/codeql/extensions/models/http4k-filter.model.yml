@@ -1,0 +1,10 @@
+extensions:
+  # ============================================================
+  # Summaries
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # ServerFilters.CatchAll — leaks stack trace into response body (info disclosure)
+      - ["org.http4k.filter", "ServerFilters$CatchAll", false, "originalBehaviour", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

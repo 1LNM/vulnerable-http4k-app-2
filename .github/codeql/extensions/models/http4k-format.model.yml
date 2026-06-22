@@ -1,22 +1,19 @@
 extensions:
+  # ============================================================
+  # Summaries — serialization/deserialization taint propagation
+  # ============================================================
   - addsTo:
       pack: codeql/java-all
       extensible: summaryModel
     data:
-      # --- AutoMarshalling (abstract class in org.http4k.format) ---
-      # asA / stringAsA - deserialize string to typed object (JVM name may be stringAsA)
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- AutoMarshalling (abstract class, subtypes=true covers Jackson, Gson, Moshi, etc.) ---
       - ["org.http4k.format", "AutoMarshalling", true, "asA", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.format", "AutoMarshalling", true, "stringAsA", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-
-      # asInputStream(Any) - serialize object to InputStream
       - ["org.http4k.format", "AutoMarshalling", true, "asInputStream", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-
-      # asFormatString(Any) - serialize object to String
       - ["org.http4k.format", "AutoMarshalling", true, "asFormatString", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-
-      # convert(IN) - convert between types via serialization round-trip
       - ["org.http4k.format", "AutoMarshalling", true, "convert", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
-      # --- Json interface (org.http4k.format) ---
-      # Json.parse(String) - parse string to JSON node
+      # --- Json interface (subtypes=true covers all JSON implementations) ---
       - ["org.http4k.format", "Json", true, "parse", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

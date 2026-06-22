@@ -1,18 +1,21 @@
 extensions:
+  # ============================================================
+  # Sources — WebSocket and SSE message data
+  # ============================================================
   - addsTo:
       pack: codeql/java-all
       extensible: sourceModel
     data:
       # Columns: package, type, subtypes, name, signature, ext, OUTPUT, KIND, provenance
 
-      # WsMessage
+      # --- WsMessage ---
       - ["org.http4k.websocket", "WsMessage", false, "bodyString", "()", "", "ReturnValue", "remote", "manual"]
       - ["org.http4k.websocket", "WsMessage", false, "getBody", "()", "", "ReturnValue", "remote", "manual"]
 
-      # SseMessage.Data
+      # --- SseMessage.Data ---
       - ["org.http4k.sse", "SseMessage$Data", false, "getData", "()", "", "ReturnValue", "remote", "manual"]
 
-      # SseMessage.Event
+      # --- SseMessage.Event ---
       - ["org.http4k.sse", "SseMessage$Event", false, "getData", "()", "", "ReturnValue", "remote", "manual"]
       - ["org.http4k.sse", "SseMessage$Event", false, "getEvent", "()", "", "ReturnValue", "remote", "manual"]
       - ["org.http4k.sse", "SseMessage$Event", false, "getId", "()", "", "ReturnValue", "remote", "manual"]

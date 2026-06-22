@@ -13,7 +13,7 @@ Test application for validating [CodeQL MaD (Models as Data)](https://codeql.git
 
 ```
 .github/
-  codeql/extensions/models/     # 10 custom MaD model YAML files
+  codeql/extensions/models/     # 8 custom MaD model YAML files (by module)
   workflows/codeql.yml          # CodeQL CI workflow (build-mode: manual)
 src/main/kotlin/com/example/vulnerable/
   App.kt                        # Route registration (~50 endpoints)
@@ -36,22 +36,20 @@ src/main/kotlin/com/example/vulnerable/
 
 ## Custom Model Files
 
-All 10 model files live in `.github/codeql/extensions/models/` and are auto-discovered by CodeQL:
+All 8 model files live in `.github/codeql/extensions/models/`, organized by http4k module:
 
-| File | Type | Entries | Coverage |
-|------|------|---------|----------|
-| `http4k-core-sources.model.yml` | sourceModel | 26 | Request query/header/body/uri, form data, cookies, path params, auth headers, Uri.credentials |
-| `http4k-core-summaries.model.yml` | summaryModel | 67 | Uri accessors/mutation (incl. UriKt extensions), Body/Cookie/Credentials accessors, HttpMessage mutation, parsing, curl, Request.getSource |
-| `http4k-core-sinks.model.yml` | sinkModel | 11 | Response body (html-injection)/header injection, html(), location(), ResourceLoader.load, Request.uri, UriTemplate |
-| `http4k-lens-summaries.model.yml` | sourceModel + summaryModel | 9 | LensExtractor.invoke/extract as remote sources; Lens/BodyLens/PathLens/LensInjector taint summaries |
-| `http4k-multipart-sources.model.yml` | sourceModel | 15 | MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody |
-| `http4k-format-summaries.model.yml` | summaryModel | 6 | AutoMarshalling asA/stringAsA/asInputStream/asFormatString/convert, Json.parse |
-| `http4k-realtime-sources.model.yml` | sourceModel | 6 | WsMessage body, SseMessage Data/Event |
-| `http4k-ssrf-sinks.model.yml` | sinkModel | 5 | UriKt.extend/relative/appendToPath, Request$Companion.create$default, Request.uri(Uri) |
-| `http4k-filter-models.model.yml` | barrierModel + summaryModel | 2 | resolvedWithinRoot sanitizer, CatchAll stack trace leak |
-| `http4k-client-models.model.yml` | sinkModel + summaryModel | 3 | DualSyncAsyncHttpHandler/AsyncHttpHandler invoke as SSRF execution sinks |
+| File | Entries | Coverage |
+|------|---------|----------|
+| `http4k-core.model.yml` | 99 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks |
+| `http4k-lens.model.yml` | 16 | LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), Lens/BodyLens/PathLens/LensInjector summaries |
+| `http4k-routing.model.yml` | 3 | ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot sanitizer |
+| `http4k-filter.model.yml` | 1 | ServerFilters.CatchAll stack trace leak |
+| `http4k-multipart.model.yml` | 15 | MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody |
+| `http4k-format.model.yml` | 6 | AutoMarshalling asA/stringAsA/asFormatString/convert, Json.parse |
+| `http4k-realtime.model.yml` | 6 | WsMessage body, SseMessage Data/Event |
+| `http4k-client.model.yml` | 3 | DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks |
 
-**Total: 150 model entries.**
+**Total: 149 model entries** (consolidated from 10 files, deduplicated 1 duplicate sink).
 
 ## Expected Findings
 
