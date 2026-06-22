@@ -25,10 +25,9 @@ fun ssrfJettyClient(request: Request): Response {
 
 // Source: Request.query() → Summary: Uri.of → Sink: DualSyncAsyncHttpHandler.invoke(Request)
 fun ssrfOkHttpUri(request: Request): Response {
-    val host = request.query("host") ?: "localhost"
+    val target = request.query("target") ?: "http://localhost/api/data"
     val client = OkHttp()
-    val uri = Uri.of("http://$host/api/data")
-    val result = client(Request(GET, uri.toString()))
+    val result = client(Request(GET, Uri.of(target)))
     client.close()
     return Response(Status.OK).body("Fetched: ${result.status}")
 }

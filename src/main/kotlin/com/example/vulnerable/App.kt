@@ -81,7 +81,12 @@ fun main() {
         "/client/okhttp" bind GET to ::ssrfOkHttp,
         "/client/jetty" bind GET to ::ssrfJettyClient,
         "/client/okhttp-uri" bind GET to ::ssrfOkHttpUri,
-        "/client/okhttp-async" bind GET to ::ssrfOkHttpAsync
+        "/client/okhttp-async" bind GET to ::ssrfOkHttpAsync,
+
+        // Log Injection
+        "/log/query" bind GET to ::logQuery,
+        "/log/header" bind GET to ::logHeader,
+        "/log/form" bind POST to ::logForm
     )
 
     val server = app.asServer(Netty(8080)).start()

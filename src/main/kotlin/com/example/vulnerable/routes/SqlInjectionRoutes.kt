@@ -4,9 +4,8 @@ import org.http4k.core.*
 import org.http4k.core.body.form
 import org.http4k.core.body.formAsMap
 import org.http4k.core.cookie.cookie
-import org.http4k.format.Jackson.asA
+import org.http4k.format.Jackson
 import org.http4k.lens.bearerToken
-import com.example.vulnerable.model.UserInput
 import java.sql.DriverManager
 
 private fun getConnection() = DriverManager.getConnection("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1")
@@ -68,23 +67,42 @@ fun sqlHeader(request: Request): Response {
 
 // Source: CookieExtensionsKt.cookie() → Summary: Cookie.getValue() → Sink: Statement.executeQuery()
 fun sqlCookie(request: Request): Response {
-    val session = request.cookie("session")
-    val id = session?.value ?: ""
-    val result = executeUnsafeQuery(id)
-    return Response(Status.OK).body(result)
+    val cookie = request.cookie("session")
+    if (cookie != null) {
+        val id = cookie.value
+        dbInitialized
+        return getConnection().use { conn ->
+            val rs = conn.createStatement().executeQuery("SELECT * FROM users WHERE name = '$id'")
+            val results = mutableListOf<String>()
+            while (rs.next()) results.add("${rs.getInt("id")}: ${rs.getString("name")}")
+            Response(Status.OK).body(results.joinToString("\n").ifEmpty { "No results" })
+        }
+    }
+    return Response(Status.OK).body("No cookie")
 }
 
 // Source: HeaderKt.bearerToken() → Sink: Statement.executeQuery()
 fun sqlBearer(request: Request): Response {
     val token = request.bearerToken() ?: ""
-    val result = executeUnsafeQuery(token)
-    return Response(Status.OK).body(result)
+    dbInitialized
+    return getConnection().use { conn ->
+        val rs = conn.createStatement().executeQuery("SELECT * FROM users WHERE token = '$token'")
+        val results = mutableListOf<String>()
+        while (rs.next()) results.add("${rs.getInt("id")}: ${rs.getString("name")}")
+        Response(Status.OK).body(results.joinToString("\n").ifEmpty { "No results" })
+    }
 }
 
-// Source: Request.bodyString() → Summary: AutoMarshalling.asA() → Sink: Statement.executeQuery()
+// Source: Request.bodyString() → Summary: Json.parse + asFormatString → Sink: Statement.executeQuery()
 fun sqlJson(request: Request): Response {
     val body = request.bodyString()
-    val input = asA<UserInput>(body)
-    val result = executeUnsafeQuery(input.name)
-    return Response(Status.OK).body(result)
+    val parsed = Jackson.parse(body)
+    val name = Jackson.asFormatString(parsed)
+    dbInitialized
+    return getConnection().use { conn ->
+        val rs = conn.createStatement().executeQuery("SELECT * FROM users WHERE name = '$name'")
+        val results = mutableListOf<String>()
+        while (rs.next()) results.add("${rs.getInt("id")}: ${rs.getString("name")}")
+        Response(Status.OK).body(results.joinToString("\n").ifEmpty { "No results" })
+    }
 }

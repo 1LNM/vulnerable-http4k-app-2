@@ -31,6 +31,7 @@ src/main/kotlin/com/example/vulnerable/
     UriRoutes.kt                #  2 endpoints - URI/RequestSource sources
     MiscRoutes.kt               #  4 endpoints - parse, curl, params, JSON
     ClientSsrfRoutes.kt         #  4 endpoints - HTTP client SSRF
+    LogInjectionRoutes.kt       #  3 endpoints - log injection
 ```
 
 ## Custom Model Files
@@ -54,7 +55,7 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 
 ## Expected Findings
 
-48 distinct source-to-sink taint paths across 6 vulnerability categories.
+51 distinct source-to-sink taint paths across 7 vulnerability categories.
 
 ### XSS (CWE-079) — 19 paths
 
@@ -114,6 +115,14 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 | client-03 | ssrfOkHttpUri | `Request.query()` | `DualSyncAsyncHttpHandler.invoke(Request)` | Pending |
 | client-04 | ssrfOkHttpAsync | `Request.query()` | `AsyncHttpHandler.invoke(Request, callback)` | Pending |
 
+### Log Injection (CWE-117) — 3 paths
+
+| ID | Function | Source | Sink (built-in) | Status |
+|----|----------|--------|------|--------|
+| log-01 | logQuery | `Request.query()` | `Logger.info()` | Pending |
+| log-02 | logHeader | `Request.header()` | `Logger.warning()` | Pending |
+| log-03 | logForm | `FormBodyKt.form()` | `Logger.info()` | Pending |
+
 ### SQL Injection (CWE-089) — 8 paths
 
 | ID | Function | Source | Sink (built-in) | Status |
@@ -149,14 +158,15 @@ All 10 model files live in `.github/codeql/extensions/models/` and are auto-disc
 
 | Category | Expected | Detected | Pending | Not Detected |
 |----------|----------|----------|---------|--------------|
-| XSS | 19 | 16 | 3 (lens) | 0 |
+| XSS | 19 | 19 | 0 | 0 |
 | Redirect | 5 | 5 | 0 | 0 |
 | SSRF | 6 | 6 | 0 | 0 |
-| Client SSRF | 4 | 0 | 4 (new) | 0 |
+| Client SSRF | 4 | 3 | 0 | 1 |
+| Log Injection | 3 | 0 | 3 (new) | 0 |
 | SQL Injection | 8 | 5 | 0 | 3 |
 | Command Injection | 3 | 3 | 0 | 0 |
 | Path Injection | 3 | 3 | 0 | 0 |
-| **Total** | **48** | **38** | **7** | **3** |
+| **Total** | **51** | **44** | **3** | **4** |
 
 **Bonus findings:** CodeQL also detects ~7 secondary XSS alerts from SSRF endpoints that echo user input back in the response body. These are true positives not listed above.
 
