@@ -48,17 +48,16 @@ extensions:
       # Uri.query(name, value) - appends query parameter
       - ["org.http4k.core", "Uri", false, "query", "(String,String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
 
-      # Uri.extend(Uri) - appends path + combines query params
-      - ["org.http4k.core", "Uri", false, "extend", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
-      - ["org.http4k.core", "Uri", false, "extend", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # Uri extension functions (Uri.kt -> UriKt) - compiled as static methods
+      # Argument[0] = receiver Uri, Argument[1] = parameter
+      - ["org.http4k.core", "UriKt", false, "extend", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "UriKt", false, "extend", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
 
-      # Uri.relative(String) - RFC3986 relative resolution
-      - ["org.http4k.core", "Uri", false, "relative", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
-      - ["org.http4k.core", "Uri", false, "relative", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "UriKt", false, "relative", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "UriKt", false, "relative", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
 
-      # Uri.appendToPath(String)
-      - ["org.http4k.core", "Uri", false, "appendToPath", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
-      - ["org.http4k.core", "Uri", false, "appendToPath", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "UriKt", false, "appendToPath", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "UriKt", false, "appendToPath", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
 
       # --- Parameters utilities (Parameters.kt -> ParametersKt) ---
       # String.toParameters() - parses "key=value&key2=value2" query string
@@ -90,6 +89,8 @@ extensions:
       - ["org.http4k.core", "Body$Companion", false, "invoke", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "Body$Companion", false, "invoke", "(ByteBuffer)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "Body$Companion", false, "invoke", "(InputStream)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # JVM may compile Body(payload) as create instead of invoke
+      - ["org.http4k.core", "Body$Companion", false, "create", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # --- Request.uri(Uri) - returns new Request with given URI ---
       - ["org.http4k.core", "Request", true, "uri", "(Uri)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
@@ -124,3 +125,13 @@ extensions:
 
       # --- UriTemplate.generate(Map) - generates URI from parameters ---
       - ["org.http4k.core", "UriTemplate", false, "generate", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- Credentials property accessors (data class) ---
+      - ["org.http4k.core", "Credentials", false, "getUser", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "Credentials", false, "getPassword", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Request.getSource() - propagates taint to RequestSource ---
+      - ["org.http4k.core", "Request", true, "getSource", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Uri.credentials() - may compile with $default suffix ---
+      - ["org.http4k.core", "Uri", false, "credentials$default", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

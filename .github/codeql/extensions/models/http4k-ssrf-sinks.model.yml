@@ -5,13 +5,16 @@ extensions:
     data:
       # Columns: package, type, subtypes, name, signature, ext, INPUT, KIND, provenance
 
-      # --- Uri methods that accept tainted input for URI construction (SSRF) ---
-      - ["org.http4k.core", "Uri", false, "extend", "", "", "Argument[0]", "request-forgery", "manual"]
-      - ["org.http4k.core", "Uri", false, "relative", "(String)", "", "Argument[0]", "request-forgery", "manual"]
-      - ["org.http4k.core", "Uri", false, "appendToPath", "(String)", "", "Argument[0]", "request-forgery", "manual"]
+      # --- Uri extension functions (Uri.kt -> UriKt) - SSRF via URI construction ---
+      # These are extension functions compiled as static methods on UriKt
+      # Argument[0] = receiver (base Uri), Argument[1] = tainted input
+      - ["org.http4k.core", "UriKt", false, "extend", "", "", "Argument[1]", "request-forgery", "manual"]
+      - ["org.http4k.core", "UriKt", false, "relative", "", "", "Argument[1]", "request-forgery", "manual"]
+      - ["org.http4k.core", "UriKt", false, "appendToPath", "", "", "Argument[1]", "request-forgery", "manual"]
 
       # --- Request factory with tainted URI (SSRF) ---
-      - ["org.http4k.core", "Request$Companion", false, "invoke", "", "", "Argument[1]", "request-forgery", "manual"]
+      # Request(Method, String) compiles to Request$Companion.create$default(...)
+      - ["org.http4k.core", "Request$Companion", false, "create$default", "", "", "Argument[2]", "request-forgery", "manual"]
 
       # --- Request.uri(Uri) - modifying an existing request's URI ---
       - ["org.http4k.core", "Request", true, "uri", "(Uri)", "", "Argument[0]", "request-forgery", "manual"]

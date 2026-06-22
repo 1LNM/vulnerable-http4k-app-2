@@ -9,18 +9,18 @@ extensions:
       - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
 
       # --- Response.body(String) - reflected XSS via string body ---
-      - ["org.http4k.core", "Response", true, "body", "(String)", "", "Argument[0]", "xss", "manual"]
+      - ["org.http4k.core", "Response", true, "body", "(String)", "", "Argument[0]", "html-injection", "manual"]
 
       # --- Response.body(Body) - reflected XSS via Body object ---
-      - ["org.http4k.core", "Response", true, "body", "(Body)", "", "Argument[0]", "xss", "manual"]
+      - ["org.http4k.core", "Response", true, "body", "(Body)", "", "Argument[0]", "html-injection", "manual"]
 
       # --- Extension functions: header.kt -> HeaderKt ---
-      - ["org.http4k.lens", "HeaderKt", false, "html", "", "", "Argument[1]", "xss", "manual"]
+      - ["org.http4k.lens", "HeaderKt", false, "html", "", "", "Argument[1]", "html-injection", "manual"]
       - ["org.http4k.lens", "HeaderKt", false, "location", "", "", "Argument[1]", "url-redirection", "manual"]
 
       # --- Additional Response sinks ---
       - ["org.http4k.core", "Response", true, "replaceHeader", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
-      - ["org.http4k.core", "Response", true, "body", "(InputStream,Long)", "", "Argument[0]", "xss", "manual"]
+      - ["org.http4k.core", "Response", true, "body", "(InputStream,Long)", "", "Argument[0]", "html-injection", "manual"]
 
       # --- Request query manipulation with tainted values ---
       - ["org.http4k.core", "Request", true, "query", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]

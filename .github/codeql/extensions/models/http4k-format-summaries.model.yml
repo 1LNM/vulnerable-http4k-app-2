@@ -4,10 +4,11 @@ extensions:
       extensible: summaryModel
     data:
       # --- AutoMarshalling (abstract class in org.http4k.format) ---
-      # asA(String, KClass) - deserialize string to typed object
+      # asA / stringAsA - deserialize string to typed object (JVM name may be stringAsA)
       - ["org.http4k.format", "AutoMarshalling", true, "asA", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.format", "AutoMarshalling", true, "stringAsA", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
-      # asInputStream(Any) - serialize object to InputStream (reverse direction, but taint propagates)
+      # asInputStream(Any) - serialize object to InputStream
       - ["org.http4k.format", "AutoMarshalling", true, "asInputStream", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
       # asFormatString(Any) - serialize object to String
@@ -15,3 +16,7 @@ extensions:
 
       # convert(IN) - convert between types via serialization round-trip
       - ["org.http4k.format", "AutoMarshalling", true, "convert", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- Json interface (org.http4k.format) ---
+      # Json.parse(String) - parse string to JSON node
+      - ["org.http4k.format", "Json", true, "parse", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

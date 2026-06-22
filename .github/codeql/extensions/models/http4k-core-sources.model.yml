@@ -35,7 +35,9 @@ extensions:
       - ["org.http4k.core.body", "FormBodyKt", false, "formAsMap", "", "", "ReturnValue", "remote", "manual"]
 
       # --- Uri.credentials() - extracts username/password from URI userInfo ---
+      # JVM compiles to credentials$default due to default parameter (Charset)
       - ["org.http4k.core", "Uri", false, "credentials", "", "", "ReturnValue", "remote", "manual"]
+      - ["org.http4k.core", "Uri", false, "credentials$default", "", "", "ReturnValue", "remote", "manual"]
 
       # --- Extension functions: auth extraction (header.kt -> HeaderKt) ---
       - ["org.http4k.lens", "HeaderKt", false, "bearerToken", "", "", "ReturnValue", "remote", "manual"]
