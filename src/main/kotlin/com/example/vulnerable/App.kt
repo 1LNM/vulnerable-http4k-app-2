@@ -75,7 +75,13 @@ fun main() {
         "/misc/parse" bind POST to ::miscParse,
         "/misc/curl" bind GET to ::miscCurl,
         "/misc/params" bind GET to ::miscParams,
-        "/misc/json-convert" bind POST to ::miscJsonConvert
+        "/misc/json-convert" bind POST to ::miscJsonConvert,
+
+        // Client SSRF
+        "/client/okhttp" bind GET to ::ssrfOkHttp,
+        "/client/jetty" bind GET to ::ssrfJettyClient,
+        "/client/okhttp-uri" bind GET to ::ssrfOkHttpUri,
+        "/client/okhttp-async" bind GET to ::ssrfOkHttpAsync
     )
 
     val server = app.asServer(Netty(8080)).start()
