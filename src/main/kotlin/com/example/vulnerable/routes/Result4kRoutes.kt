@@ -47,17 +47,19 @@ fun result4kFailureComponent1(request: Request): Response {
     return Response(Status.OK).header("Content-Type", "text/html").body("<html>$reason</html>")
 }
 
-// --- ResultKt.asSuccess ---
+// --- ResultKt.asSuccess (returns Result; cast to Success to read value) ---
 fun result4kAsSuccess(request: Request): Response {
     val input = request.query("data") ?: "default"
-    val value = input.asSuccess().value
+    @Suppress("UNCHECKED_CAST")
+    val value = (input.asSuccess() as Success<String>).value
     return Response(Status.OK).header("Content-Type", "text/html").body("<html>$value</html>")
 }
 
-// --- ResultKt.asFailure ---
+// --- ResultKt.asFailure (returns Result; cast to Failure to read reason) ---
 fun result4kAsFailure(request: Request): Response {
     val input = request.query("data") ?: "default"
-    val reason = input.asFailure().reason
+    @Suppress("UNCHECKED_CAST")
+    val reason = (input.asFailure() as Failure<String>).reason
     return Response(Status.OK).header("Content-Type", "text/html").body("<html>$reason</html>")
 }
 
