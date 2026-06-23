@@ -57,7 +57,7 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 | `http4k-format.model.yml` | 6 | AutoMarshalling asA/stringAsA/asFormatString/convert, Json.parse |
 | `http4k-realtime.model.yml` | 6 | WsMessage body, SseMessage Data/Event |
 | `http4k-client.model.yml` | 3 | DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks |
-| `http4k-template.model.yml` | 2 | TemplatesKt.renderToResponse/then summaries |
+| `http4k-template.model.yml` | 2 | TemplatesKt.renderToResponse html-injection sink (+ `$default` variant) |
 | `handlebars.model.yml` | 10 | Template.apply sinks (html-injection), Handlebars.compileInline sink (template-injection), Context.combine/Template.apply/compileInline summaries |
 | `result4k.model.yml` | 18 | Success/Failure constructors and extractors, ResultKt map/flatMap/recover/peek, NullablesKt valueOrNull/asResultOr |
 
@@ -65,7 +65,7 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 
 ## Expected Findings
 
-74 distinct source-to-sink taint paths across 9 vulnerability categories (73 detected; 81 total
+74 distinct source-to-sink taint paths across 8 vulnerability categories (73 detected; 81 total
 CodeQL alerts), plus negative tests asserting barriers and framework sanitization suppress findings.
 The full alert set is locked down deterministically — see Deterministic Testing.
 
@@ -206,7 +206,7 @@ model error — analogous to the `uriRequestSource` / `miscCurl` exclusions.
 | path-01 | pathQuery | `Request.query()` | `ResourceLoader.load()` | Detected |
 | path-02 | pathHeader | `Request.header()` | `ResourceLoader.load()` | Detected |
 | path-03 | multiFileName | `MultipartFormFile.getFilename()` | `ResourceLoader.load()` | Detected |
-| path-04 | pathControlUnsanitized | `Request.query()` | `ResourceLoader.load()` | Pending |
+| path-04 | pathControlUnsanitized | `Request.query()` | `ResourceLoader.load()` | Detected |
 
 ### Negative Tests — Barriers & Framework Sanitization
 

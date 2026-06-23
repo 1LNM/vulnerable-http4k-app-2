@@ -15,10 +15,10 @@ Model files go in `.github/codeql/extensions/models/`.
 Naming convention: `http4k-<module>.model.yml` for http4k modules, `<library>.model.yml` for
 external dependencies.
 
-Current model files (11 files, 186 entries):
+Current model files (11 files, 184 entries — 5 source, 6 sink, 8 summary blocks, 1 barrier):
 
 **http4k modules:**
-1. `http4k-core.model.yml` (104) - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, response-splitting sinks
+1. `http4k-core.model.yml` (102) - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks (response-splitting sink removed — http4k sanitizes CR/LF)
 2. `http4k-lens.model.yml` (17) - LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries
 3. `http4k-routing.model.yml` (3) - ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot **barrier** (path-injection sanitizer)
 4. `http4k-filter.model.yml` (1) - ServerFilters.CatchAll stack trace leak summary
@@ -44,8 +44,8 @@ Pack: `codeql/java-all`
 | `sinkModel` | 9: package, type, subtypes, name, signature, ext, input, kind, provenance | Vulnerable endpoints |
 | `summaryModel` | 10: package, type, subtypes, name, signature, ext, input, output, kind, provenance | Flow through methods |
 | `neutralModel` | 6: package, type, subtypes, name, signature, provenance | No dataflow impact |
-| `barrierModel` | 9: package, type, subtypes, name, signature, ext, kind, input, provenance | Sanitizers blocking taint |
-| `barrierGuardModel` | 10: package, type, subtypes, name, signature, ext, kind, input, acceptingValue, provenance | Conditional validators |
+| `barrierModel` | 9: package, type, subtypes, name, signature, ext, output, kind, provenance | Sanitizers blocking taint |
+| `barrierGuardModel` | 10: package, type, subtypes, name, signature, ext, input, acceptingValue, kind, provenance | Conditional validators |
 
 ### YAML Structure
 
@@ -436,10 +436,12 @@ extends `AutoMarshalling`, which is already modelled in `http4k-format.model.yml
   (Template.apply overloads, compileInline overloads, Context.combine variants) is exercised by
   its own endpoint with an **inline** `Response.body` sink — a shared sink helper would
   consolidate multiple flows into a single alert, hiding per-entry validation.
-- **`renderToResponse` sink relies on ViewModel field flow.** The http4k-template sink fires only
-  if CodeQL propagates taint from a tainted constructor argument through the ViewModel object to
-  the `renderToResponse` call. This is the least certain entry to validate; if CI does not flag
-  `templateRenderToResponse`, the limitation is the field-flow tracking, not the model signature.
+- **`renderToResponse` is NOT detected (confirmed).** The sink fires only if CodeQL propagates
+  taint from the `GreetingView(name)` constructor argument through the ViewModel object to the
+  `renderToResponse` call. CI confirmed it does not (the other 6 template endpoints all fire; this
+  one produces zero alerts). The limitation is CodeQL's ViewModel field-flow tracking, not the
+  model signature — the entry is kept and treated like the `uriRequestSource` / `miscCurl`
+  known-gap exclusions. `expectations.json` therefore declares TemplateRoutes.kt at 7 XSS, not 8.
 
 ### When to add a new dependency model
 
