@@ -41,3 +41,5 @@ extensions:
 
       # --- MultipartFormBody.from(Request) — factory creates body from request ---
       - ["org.http4k.core", "MultipartFormBody$Companion", false, "from", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # Kotlin default params compile to from$default(Companion, HttpMessage, ..., mask, marker)
+      - ["org.http4k.core", "MultipartFormBody$Companion", false, "from$default", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]

@@ -106,8 +106,11 @@ extensions:
       - ["org.http4k.core", "Uri", false, "toString", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
 
       # --- Uri.copy — data class copy preserves taint from all components ---
+      # Kotlin compiles copy with default params to copy$default(Uri, String x7, int mask, Object)
       - ["org.http4k.core", "Uri", false, "copy", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "Uri", false, "copy", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "Uri", false, "copy$default", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.http4k.core", "Uri", false, "copy$default", "", "", "Argument[1..7]", "ReturnValue", "taint", "manual"]
 
       # --- Uri.of(String) — factory on companion ---
       - ["org.http4k.core", "Uri$Companion", false, "of", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
