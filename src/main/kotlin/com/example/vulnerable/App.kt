@@ -124,7 +124,14 @@ fun main() {
 
         // Sanitizer barrier validation — control (MUST alert) vs treatment (MUST NOT alert)
         "/sanitizer/path-control" bind GET to ::pathControlUnsanitized,
-        "/sanitizer/path-resolved-within-root" bind GET to ::pathResolvedWithinRoot
+        "/sanitizer/path-resolved-within-root" bind GET to ::pathResolvedWithinRoot,
+
+        // Comparison plan verification
+        "/verify/uri-tostring" bind GET to ::uriToStringXss,
+        "/verify/uri-copy-this" bind GET to ::uriCopyThisXss,
+        "/verify/uri-copy-arg" bind GET to ::uriCopyArgXss,
+        "/verify/multi-from-factory" bind POST to ::multiFromFactoryXss,
+        "/verify/method-echo" bind GET to ::requestMethodEcho
     )
 
     val server = app.asServer(Netty(8080)).start()

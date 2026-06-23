@@ -27,7 +27,9 @@
 
     {"rule": "java/path-injection", "file": "PathInjectionRoutes.kt", "count": 2, "why": "pathQuery + pathHeader"},
     {"rule": "java/path-injection", "file": "MultipartRoutes.kt", "count": 1, "why": "multipart filename path traversal"},
-    {"rule": "java/path-injection", "file": "SanitizerControlRoutes.kt", "count": 1, "why": "CONTROL: unsanitized load() must alert (twin of pathResolvedWithinRoot)"}
+    {"rule": "java/path-injection", "file": "SanitizerControlRoutes.kt", "count": 1, "why": "CONTROL: unsanitized load() must alert (twin of pathResolvedWithinRoot)"},
+
+    {"rule": "java/xss", "file": "ComparisonPlanRoutes.kt", "count": 4, "why": "VERIFY: uriToString(1)+uriCopyThis(1)+uriCopyArg(1)+multiFromFactory(1); requestMethodEcho should NOT fire"}
   ],
 
   "forbidden": [
