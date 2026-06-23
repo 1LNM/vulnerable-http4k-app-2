@@ -29,7 +29,10 @@
     {"rule": "java/path-injection", "file": "MultipartRoutes.kt", "count": 1, "why": "multipart filename path traversal"},
     {"rule": "java/path-injection", "file": "SanitizerControlRoutes.kt", "count": 1, "why": "CONTROL: unsanitized load() must alert (twin of pathResolvedWithinRoot)"},
 
-    {"rule": "java/xss", "file": "ComparisonPlanRoutes.kt", "count": 3, "why": "VERIFY: uriToString(1)+uriCopyThis(1)+uriCopyArg(1); multiFrom* and methodEcho do NOT fire — investigating"}
+    {"rule": "java/xss", "file": "ComparisonPlanRoutes.kt", "count": 3, "why": "VERIFY: uriToString(1)+uriCopyThis(1)+uriCopyArg(1); multiFrom* and methodEcho do NOT fire — investigating"},
+
+    {"rule": "java/xss", "file": "CommonsFileUploadRoutes.kt", "count": 4, "why": "NATIVE: CodeQL 2.24.0+ covers commons-fileupload natively — all 4 endpoints fire without custom models"},
+    {"rule": "java/server-side-template-injection", "file": "FreeMarkerRoutes.kt", "count": 1, "why": "NATIVE: CodeQL covers FreeMarker SSTI natively (1 of 2 SSTI endpoints); XSS via data model NOT tracked"}
   ],
 
   "forbidden": [
