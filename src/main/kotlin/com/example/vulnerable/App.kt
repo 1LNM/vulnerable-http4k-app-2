@@ -164,7 +164,11 @@ fun main() {
         // Arrow-kt Option — wrap/unwrap tainted data
         "/arrow/option-ornull" bind GET to ::arrowOptionOrNull,
         "/arrow/option-getorelse" bind GET to ::arrowOptionGetOrElse,
-        "/arrow/option-map" bind GET to ::arrowOptionMap
+        "/arrow/option-map" bind GET to ::arrowOptionMap,
+
+        // Krouton — URL path extraction
+        "/krouton/split-path/{segment}" bind GET to ::kroutonSplitPath,
+        "/krouton/parse-element" bind GET to ::kroutonParseElement
     )
 
     val server = app.asServer(Netty(8080)).start()

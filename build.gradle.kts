@@ -27,6 +27,7 @@ dependencies {
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("com.auth0:java-jwt:4.4.0")
     implementation("io.arrow-kt:arrow-core-data:0.12.1")
+    implementation("com.natpryce:krouton:2.0.0.0")
     implementation(kotlin("stdlib"))
 }
 
