@@ -65,8 +65,9 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 
 ## Expected Findings
 
-74 distinct source-to-sink taint paths across 9 vulnerability categories (24 pending CI validation),
-plus negative tests asserting barriers and framework sanitization suppress findings.
+74 distinct source-to-sink taint paths across 9 vulnerability categories (73 detected; 81 total
+CodeQL alerts), plus negative tests asserting barriers and framework sanitization suppress findings.
+The full alert set is locked down deterministically — see Deterministic Testing.
 
 ### XSS (CWE-079) — core http4k — 20 paths
 
@@ -97,10 +98,11 @@ plus negative tests asserting barriers and framework sanitization suppress findi
 - xss-13 (uriRequestSource): `RequestSource` is modelled as `local` source, not `remote` — CodeQL correctly does not flag it as XSS
 - miscCurl: Requires the `Request` object itself to carry taint, which CodeQL doesn't support (only method return values are tainted)
 
-### XSS (CWE-079) — result4k taint propagation — 16 paths
+### XSS (CWE-079) — result4k taint propagation — 16 paths (all detected)
 
 Each endpoint wraps `Request.query()` data through a result4k API, then reflects it via an
-inline `Response.body(String)` sink (one alert per entry). Validates every `result4k.model.yml` entry.
+inline `Response.body(String)` sink (one alert per entry). All 16 fired in CI — every
+`result4k.model.yml` entry is validated.
 
 | ID | Function | result4k entry exercised |
 |----|----------|--------------------------|
@@ -121,15 +123,20 @@ inline `Response.body(String)` sink (one alert per entry). Validates every `resu
 | r4k-15 | result4kValueOrNullXss | `NullablesKt.valueOrNull` |
 | r4k-16 | result4kAsResultOr | `NullablesKt.asResultOr` |
 
-### XSS (CWE-079) — Handlebars templates — 5 paths
+### XSS (CWE-079) — Handlebars templates — 5 paths (4 detected)
 
-| ID | Function | Sink / entry exercised |
-|----|----------|------------------------|
-| hbs-01 | handlebarsXss | `Template.apply(Object)` html-injection |
-| hbs-02 | handlebarsApplyWriter | `Template.apply(Object,Writer)` html-injection |
-| hbs-03 | handlebarsApplyContext | `Context.combine(String,Object)` summary → `Template.apply(Context)` html-injection |
-| hbs-04 | handlebarsApplyContextMap | `Context.combine(Map)` summary → `Template.apply(Context)` html-injection |
-| hbs-05 | templateRenderToResponse | `TemplatesKt.renderToResponse` html-injection (relies on ViewModel field flow) |
+| ID | Function | Sink / entry exercised | Status |
+|----|----------|------------------------|--------|
+| hbs-01 | handlebarsXss | `Template.apply(Object)` html-injection | Detected |
+| hbs-02 | handlebarsApplyWriter | `Template.apply(Object,Writer)` html-injection | Detected |
+| hbs-03 | handlebarsApplyContext | `Context.combine(String,Object)` summary → `Template.apply(Context)` html-injection | Detected |
+| hbs-04 | handlebarsApplyContextMap | `Context.combine(Map)` summary → `Template.apply(Context)` html-injection | Detected |
+| hbs-05 | templateRenderToResponse | `TemplatesKt.renderToResponse` html-injection | **Not detected** |
+
+**hbs-05 not detected:** the `renderToResponse` sink model is correct, but CodeQL does not propagate
+taint from the `GreetingView(name)` constructor argument through the ViewModel object to the sink
+(ViewModel field-flow limitation). The model entry is kept; this is a CodeQL tracking gap, not a
+model error — analogous to the `uriRequestSource` / `miscCurl` exclusions.
 
 ### URL Redirect (CWE-601) — 6 paths
 
@@ -218,28 +225,33 @@ The response-splitting case has no user-callable control because the sanitizatio
 
 ### Summary
 
-| Category | Expected | Detected |
-|----------|----------|----------|
+| Category | Paths | Detected |
+|----------|-------|----------|
 | XSS — core http4k | 20 | 20 |
-| XSS — result4k | 16 | Pending |
-| XSS — Handlebars | 5 | Pending |
+| XSS — result4k | 16 | 16 |
+| XSS — Handlebars | 5 | 4 (renderToResponse not detected — CodeQL field-flow) |
 | Redirect | 6 | 6 |
-| Template Injection | 2 | Pending |
+| Template Injection | 2 | 2 |
 | SSRF | 6 | 6 |
 | Client SSRF | 4 | 4 |
 | SQL Injection | 8 | 8 |
 | Command Injection | 3 | 3 |
-| Path Injection | 4 | Pending |
-| **Total (positive paths)** | **74** | **Pending** |
+| Path Injection | 4 | 4 |
+| **Total (positive paths)** | **74** | **73** |
 
-| Negative test | Expectation |
-|---------------|-------------|
-| `pathResolvedWithinRoot` | no `java/path-injection` (barrier) |
-| `ResponseSplittingRoutes` / redirects | no `java/http-response-splitting` (framework CR/LF stripping) |
+| Negative test | Expectation | Result |
+|---------------|-------------|--------|
+| `pathResolvedWithinRoot` | no `java/path-injection` (barrier) | Suppressed ✓ |
+| `ResponseSplittingRoutes` / redirects | no `java/http-response-splitting` (framework CR/LF stripping) | Suppressed ✓ |
 
-**Pending:** 24 newly-added/changed paths (16 result4k + 5 Handlebars XSS + 2 SSTI + 1 path
-control) await CI validation, plus the 2 negative-test assertions. Response Splitting was removed
-as a category — http4k sanitizes CR/LF internally, so those were false positives.
+73 of 74 positive paths detected (the lone gap, `renderToResponse`, is a CodeQL ViewModel
+field-flow limitation, not a model error). Both negative tests pass: the `resolvedWithinRoot`
+barrier suppresses path-injection while its identical control still alerts, and response-splitting
+is gone (http4k sanitizes CR/LF internally — those were false positives, category removed).
+
+The scan emits **81 CodeQL alerts** total (paths plus bonus XSS on SSRF endpoints and double
+alerts where a Handlebars `apply` sink and its rendered-body summary both fire). The exact
+per-(rule, file) alert baseline is locked in `scripts/expectations.json` and enforced by CI.
 
 **Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS). These are true positives not listed above.
 
@@ -251,18 +263,25 @@ CodeQL cannot run locally (CI only), and eyeballing scan results — especially 
 finding — is not reliable. `scripts/check_findings.py` parses the SARIF output and asserts it
 against `scripts/expectations.json`:
 
-- **`expected`** — findings that MUST be present (positive controls: sinks/flows fire).
-- **`forbidden`** — findings that MUST be absent (barriers and framework sanitization suppress them).
+It is a **closed-world** check over the whole alert set:
 
-Matching is by `ruleId` + a substring of the result's file path. The script is dependency-free
-(Python 3 stdlib) and exits non-zero on any mismatch, so the CI workflow fails on regression:
+- **`counts`** — exact number of alerts per `(rule, file)`. Every one of the 81 alerts is declared;
+  a count that drifts (a path regresses 16→15, or a model stops firing) fails the build.
+- **`forbidden`** — `(rule, file)` pairs that must be zero (barriers / framework sanitization).
+- **undeclared findings** — any alert whose `(rule, file)` is not declared fails the build, so an
+  unexpected new finding cannot slip in silently.
+
+Matching is by `ruleId` + file **basename**, which is robust to line-number shifts (rewriting a
+file moves alert lines but not counts — this is why the earlier edits showed "closed/new" churn).
+Dependency-free (Python 3 stdlib); exits non-zero on any mismatch, so CI fails on regression:
 
 ```bash
 python3 scripts/check_findings.py sarif-results scripts/expectations.json
 ```
 
-Run it locally against a downloaded SARIF (`gh run download ... --name codeql-sarif`) to reproduce
-the CI gate. Extend coverage by adding rows to `expectations.json` — no code changes needed.
+Run it locally against a downloaded SARIF (`gh run download <run-id> --name codeql-sarif -D sarif-output`)
+to reproduce the CI gate. When models/endpoints change, update the baseline counts in
+`expectations.json` intentionally — that diff is the record of what changed.
 
 ### Key Learnings
 

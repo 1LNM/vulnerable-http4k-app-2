@@ -1,49 +1,38 @@
 {
-  "_comment": "Deterministic CodeQL expectations. 'expected' findings MUST be present; 'forbidden' findings MUST be absent. Matching is by ruleId plus a substring of the SARIF result file path. See scripts/check_findings.py.",
+  "_comment": "Closed-world deterministic baseline for the CodeQL scan. 'counts' must match exactly per (rule, file basename); 'forbidden' must be zero; any undeclared (rule, file) finding fails the build. Matched by ruleId + file basename (robust to line shifts). Baseline captured from run 28025120189 (81 alerts). Update intentionally when models/endpoints change.",
 
-  "expected": [
-    {
-      "rule": "java/path-injection",
-      "file": "SanitizerControlRoutes.kt",
-      "why": "Control: load(query) with no sanitizer must be flagged. Proves the sink + flow work, so the matching treatment's silence is attributable to the barrier."
-    },
-    {
-      "rule": "java/path-injection",
-      "file": "PathInjectionRoutes.kt",
-      "why": "Baseline path-injection coverage (pathQuery / pathHeader)."
-    },
-    {
-      "rule": "java/xss",
-      "file": "XssRoutes.kt",
-      "why": "Baseline reflected-XSS coverage."
-    },
-    {
-      "rule": "java/sql-injection",
-      "file": "SqlInjectionRoutes.kt",
-      "why": "Baseline SQL-injection coverage."
-    },
-    {
-      "rule": "java/ssrf",
-      "file": "SsrfRoutes.kt",
-      "why": "Baseline SSRF coverage."
-    }
+  "counts": [
+    {"rule": "java/xss", "file": "XssRoutes.kt", "count": 10, "why": "10 core reflected-XSS endpoints"},
+    {"rule": "java/xss", "file": "Result4kRoutes.kt", "count": 16, "why": "full result4k API coverage, one inline sink per endpoint"},
+    {"rule": "java/xss", "file": "TemplateRoutes.kt", "count": 7, "why": "handlebarsXss(2)+applyWriter(1)+applyContext(2)+applyContextMap(2); renderToResponse does NOT fire (ViewModel field-flow limitation)"},
+    {"rule": "java/xss", "file": "LensRoutes.kt", "count": 4, "why": "lens extract x3 + lens inject"},
+    {"rule": "java/xss", "file": "MiscRoutes.kt", "count": 3, "why": "parse, params, json-convert"},
+    {"rule": "java/xss", "file": "MultipartRoutes.kt", "count": 2, "why": "multipart field XSS (+ bonus)"},
+    {"rule": "java/xss", "file": "SsrfRoutes.kt", "count": 6, "why": "bonus XSS: SSRF endpoints echo input into the response body"},
+    {"rule": "java/xss", "file": "HeaderRoutes.kt", "count": 1, "why": "basic-auth XSS"},
+    {"rule": "java/xss", "file": "UriRoutes.kt", "count": 1, "why": "uri credentials XSS"},
+
+    {"rule": "java/server-side-template-injection", "file": "TemplateRoutes.kt", "count": 2, "why": "handlebarsSsti + compileInlineDelims"},
+
+    {"rule": "java/unvalidated-url-redirection", "file": "RedirectRoutes.kt", "count": 6, "why": "redirect endpoints"},
+    {"rule": "java/unvalidated-url-redirection", "file": "ResponseSplittingRoutes.kt", "count": 1, "why": "splitHeaderValue still flags url-redirection (Arg[1])"},
+
+    {"rule": "java/ssrf", "file": "SsrfRoutes.kt", "count": 6, "why": "6 SSRF endpoints"},
+    {"rule": "java/ssrf", "file": "ClientSsrfRoutes.kt", "count": 4, "why": "4 HTTP-client SSRF endpoints"},
+
+    {"rule": "java/sql-injection", "file": "SqlInjectionRoutes.kt", "count": 4, "why": "consolidated shared helper (1) + 3 inline"},
+    {"rule": "java/sql-injection", "file": "HeaderRoutes.kt", "count": 1, "why": "bearer-token SQLi"},
+
+    {"rule": "java/command-line-injection", "file": "CommandInjectionRoutes.kt", "count": 3, "why": "query/header/body command injection"},
+
+    {"rule": "java/path-injection", "file": "PathInjectionRoutes.kt", "count": 2, "why": "pathQuery + pathHeader"},
+    {"rule": "java/path-injection", "file": "MultipartRoutes.kt", "count": 1, "why": "multipart filename path traversal"},
+    {"rule": "java/path-injection", "file": "SanitizerControlRoutes.kt", "count": 1, "why": "CONTROL: unsanitized load() must alert (twin of pathResolvedWithinRoot)"}
   ],
 
   "forbidden": [
-    {
-      "rule": "java/path-injection",
-      "file": "SanitizerRoutes.kt",
-      "why": "Treatment: identical to the control except for resolvedWithinRoot(). The barrier model must suppress the path-injection finding. Any alert here means the barrier failed."
-    },
-    {
-      "rule": "java/http-response-splitting",
-      "file": "ResponseSplittingRoutes.kt",
-      "why": "http4k strips CR/LF from header names/values internally (sanitizeHeader -> withoutCrLf), so response splitting via Response.header is not exploitable. The sink was removed; no alert should appear."
-    },
-    {
-      "rule": "java/http-response-splitting",
-      "file": "RedirectRoutes.kt",
-      "why": "Same framework-internal CR/LF sanitization applies to the redirect endpoints."
-    }
+    {"rule": "java/path-injection", "file": "SanitizerRoutes.kt", "why": "TREATMENT: identical to control except resolvedWithinRoot() barrier; must be suppressed"},
+    {"rule": "java/http-response-splitting", "file": "ResponseSplittingRoutes.kt", "why": "http4k strips CR/LF in header() (sanitizeHeader->withoutCrLf); sink removed"},
+    {"rule": "java/http-response-splitting", "file": "RedirectRoutes.kt", "why": "same framework CR/LF sanitization"}
   ]
 }

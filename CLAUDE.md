@@ -378,10 +378,15 @@ especially for **negative** assertions, where "no alert" could mean the barrier 
 broke for an unrelated reason. The deterministic layer is `scripts/check_findings.py` +
 `scripts/expectations.json`:
 
-- `expected` — findings that MUST be present (positive controls).
-- `forbidden` — findings that MUST be absent (barriers, framework sanitization).
-- Matching is `ruleId` + a substring of the SARIF result's file path. Dependency-free (stdlib),
-  exits non-zero on mismatch. The CI workflow runs it as a gate after analysis.
+It is a **closed-world** check — every alert in the scan must be accounted for:
+
+- `counts` — exact alert count per `(rule, file)`. A drift (regression or new finding) fails.
+- `forbidden` — `(rule, file)` pairs that must be zero (barriers, framework sanitization).
+- any **undeclared** `(rule, file)` finding fails the build (no silent new alerts).
+- Matching is `ruleId` + file **basename**, robust to line-number shifts (rewriting a file moves
+  alert lines but not counts — this is the cause of the "closed/new" churn seen when editing route
+  files). Dependency-free (stdlib), exits non-zero on mismatch. CI runs it as a gate after analysis.
+- Update the baseline counts intentionally when models/endpoints change; that diff records the change.
 
 Why this layer and not JVM unit tests: the models only have meaning when CodeQL runs, so the
 assertions live at the SARIF level, not in JUnit. (A future complement would be runtime tests that
