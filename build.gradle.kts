@@ -19,6 +19,8 @@ dependencies {
     implementation("org.http4k:http4k-format-jackson:$http4kVersion")
     implementation("org.http4k:http4k-client-okhttp:$http4kVersion")
     implementation("org.http4k:http4k-client-jetty:$http4kVersion")
+    implementation("org.http4k:http4k-template-handlebars:$http4kVersion")
+    implementation("dev.forkhandles:result4k:2.25.6.0")
     implementation("com.h2database:h2:2.2.224")
     implementation(kotlin("stdlib"))
 }

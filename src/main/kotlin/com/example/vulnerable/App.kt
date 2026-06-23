@@ -93,7 +93,16 @@ fun main() {
         "/split/header-value" bind GET to ::splitHeaderValue,
 
         // Lens Injection
-        "/lens/inject-xss" bind GET to ::lensInjectXss
+        "/lens/inject-xss" bind GET to ::lensInjectXss,
+
+        // Result4k taint flow
+        "/result4k/success" bind GET to ::result4kSuccessXss,
+        "/result4k/map" bind GET to ::result4kMapXss,
+        "/result4k/value-or-null" bind GET to ::result4kValueOrNullXss,
+
+        // Handlebars template
+        "/template/handlebars-xss" bind GET to ::handlebarsXss,
+        "/template/handlebars-ssti" bind GET to ::handlebarsSsti
     )
 
     val server = app.asServer(Netty(8080)).start()

@@ -1,0 +1,39 @@
+extensions:
+  # ============================================================
+  # Sinks — Handlebars template engine
+  # Library: com.github.jknack:handlebars (wrapped by http4k-template-handlebars)
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: sinkModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, INPUT, KIND, provenance
+
+      # --- Template.apply — renders context data into HTML (XSS risk) ---
+      - ["com.github.jknack.handlebars", "Template", true, "apply", "(Object)", "", "Argument[0]", "html-injection", "manual"]
+      - ["com.github.jknack.handlebars", "Template", true, "apply", "(Object,Writer)", "", "Argument[0]", "html-injection", "manual"]
+      - ["com.github.jknack.handlebars", "Template", true, "apply", "(Context)", "", "Argument[0]", "html-injection", "manual"]
+
+      # --- Handlebars.compileInline — user-controlled template string (SSTI) ---
+      - ["com.github.jknack.handlebars", "Handlebars", false, "compileInline", "(String)", "", "Argument[0]", "template-injection", "manual"]
+      - ["com.github.jknack.handlebars", "Handlebars", false, "compileInline", "(String,String,String)", "", "Argument[0]", "template-injection", "manual"]
+
+  # ============================================================
+  # Summaries — taint propagation through Handlebars objects
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- Context.combine — merges model data, preserving taint ---
+      - ["com.github.jknack.handlebars", "Context", true, "combine", "(Object)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["com.github.jknack.handlebars", "Context", true, "combine", "(String,Object)", "", "Argument[1]", "ReturnValue", "taint", "manual"]
+
+      # --- Template.apply — also a summary: taint flows from context to rendered string ---
+      - ["com.github.jknack.handlebars", "Template", true, "apply", "(Object)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["com.github.jknack.handlebars", "Template", true, "apply", "(Context)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- Handlebars.compile/compileInline — taint from template source to Template object ---
+      - ["com.github.jknack.handlebars", "Handlebars", false, "compileInline", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]

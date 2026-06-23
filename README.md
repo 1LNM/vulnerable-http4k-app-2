@@ -14,10 +14,10 @@ Test application for validating [CodeQL MaD (Models as Data)](https://codeql.git
 ```
 CLAUDE.md                        # Modelling reference, design decisions, format docs
 .github/
-  codeql/extensions/models/     # 8 custom MaD model YAML files (by module)
+  codeql/extensions/models/     # 11 custom MaD model YAML files (by module/library)
   workflows/codeql.yml          # CodeQL CI workflow (build-mode: manual)
 src/main/kotlin/com/example/vulnerable/
-  App.kt                        # Route registration (56 endpoints)
+  App.kt                        # Route registration (61 endpoints)
   model/UserInput.kt            # Data class for JSON deserialization tests
   routes/
     XssRoutes.kt                # 10 endpoints - reflected XSS
@@ -34,11 +34,13 @@ src/main/kotlin/com/example/vulnerable/
     ClientSsrfRoutes.kt         #  4 endpoints - HTTP client SSRF
     LogInjectionRoutes.kt       #  3 endpoints - log injection
     ResponseSplittingRoutes.kt  #  2 endpoints - HTTP response splitting
+    Result4kRoutes.kt           #  3 endpoints - result4k taint flow
+    TemplateRoutes.kt           #  2 endpoints - Handlebars template XSS/SSTI
 ```
 
 ## Custom Model Files
 
-All 8 model files live in `.github/codeql/extensions/models/`, organized by http4k module:
+All 11 model files live in `.github/codeql/extensions/models/`, organized by module/library:
 
 | File | Entries | Coverage |
 |------|---------|----------|
@@ -50,14 +52,17 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 | `http4k-format.model.yml` | 6 | AutoMarshalling asA/stringAsA/asFormatString/convert, Json.parse |
 | `http4k-realtime.model.yml` | 6 | WsMessage body, SseMessage Data/Event |
 | `http4k-client.model.yml` | 3 | DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks |
+| `http4k-template.model.yml` | 2 | TemplatesKt.renderToResponse/then summaries |
+| `handlebars.model.yml` | 10 | Template.apply sinks (html-injection), Handlebars.compileInline sink (template-injection), Context.combine/Template.apply/compileInline summaries |
+| `result4k.model.yml` | 18 | Success/Failure constructors and extractors, ResultKt map/flatMap/recover/peek, NullablesKt valueOrNull/asResultOr |
 
-**Total: 156 model entries.**
+**Total: 186 model entries.**
 
 ## Expected Findings
 
-52 distinct source-to-sink taint paths across 8 vulnerability categories.
+57 distinct source-to-sink taint paths across 10 vulnerability categories.
 
-### XSS (CWE-079) — 20 paths
+### XSS (CWE-079) — 24 paths
 
 | ID | Function | Source | Sink | Status |
 |----|----------|--------|------|--------|
@@ -81,6 +86,10 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 | xss-19 | miscParse | `Request.bodyString()` | `Response.body(String)` | Detected |
 | xss-20 | miscParams | `Request.getUri()` | `Response.body(String)` | Detected |
 | xss-21 | miscJsonConvert | `Request.bodyString()` | `Response.body(String)` | Detected |
+| xss-22 | result4kSuccessXss | `Request.query()` | `Response.body(String)` via `Success.value` | Pending |
+| xss-23 | result4kMapXss | `Request.query()` | `Response.body(String)` via `Result.map` | Pending |
+| xss-24 | result4kValueOrNullXss | `Request.query()` | `Response.body(String)` via `valueOrNull` | Pending |
+| xss-25 | handlebarsXss | `Request.query()` | `Template.apply()` | Pending |
 
 **Excluded from count:**
 - xss-13 (uriRequestSource): `RequestSource` is modelled as `local` source, not `remote` — CodeQL correctly does not flag it as XSS
@@ -105,6 +114,12 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 | split-02 | splitHeaderValue | `Request.query()` | `Response.header(name, tainted)` | Detected |
 
 **Bonus findings:** CodeQL also detects response-splitting on 3 existing redirect endpoints (redirectHeader, redirectTemplate, redirectCookieSrc) since `Response.header` value is now also a response-splitting sink.
+
+### Template Injection (CWE-1336) — 1 path
+
+| ID | Function | Source | Sink | Status |
+|----|----------|--------|------|--------|
+| ssti-01 | handlebarsSsti | `Request.query()` | `Handlebars.compileInline(String)` | Pending |
 
 ### SSRF / Request Forgery (CWE-918) — 6 paths
 
@@ -161,23 +176,22 @@ All 8 model files live in `.github/codeql/extensions/models/`, organized by http
 
 | Category | Expected | Detected |
 |----------|----------|----------|
-| XSS | 20 | 20 |
+| XSS | 24 | Pending |
 | Redirect | 6 | 6 |
 | Response Splitting | 2 | 2 |
+| Template Injection | 1 | Pending |
 | SSRF | 6 | 6 |
 | Client SSRF | 4 | 4 |
 | SQL Injection | 8 | 8 |
 | Command Injection | 3 | 3 |
 | Path Injection | 3 | 3 |
-| **Total** | **52** | **52** |
+| **Total** | **57** | **Pending** |
 
-**100% detection rate** on all expected source-to-sink paths.
+**Pending:** 5 new paths (4 XSS via result4k/handlebars + 1 SSTI) await CI validation.
 
 **Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS), and from redirect endpoints that also match response-splitting. These are true positives not listed above.
 
 **Log injection:** 3 test endpoints exist (LogInjectionRoutes.kt) but `java/log-injection` is not included in CodeQL's default security query suite. The endpoints validate that http4k sources flow into logging sinks if the query is enabled.
-
-**Last CI run:** 60 distinct CodeQL alerts (includes bonus findings and consolidated SQL alerts).
 
 ### Key Learnings
 

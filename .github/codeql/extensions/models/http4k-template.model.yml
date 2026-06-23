@@ -1,0 +1,16 @@
+extensions:
+  # ============================================================
+  # Summaries — http4k template abstraction taint propagation
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- TemplatesKt.renderToResponse — ViewModel data flows into Response ---
+      # Extension on TemplateRenderer (Function1). JVM args: Arg[0]=receiver, Arg[1]=ViewModel
+      - ["org.http4k.template", "TemplatesKt", false, "renderToResponse", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
+
+      # --- TemplatesKt.then — composes two renderers, taint flows through ---
+      - ["org.http4k.template", "TemplatesKt", false, "then", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

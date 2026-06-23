@@ -1,0 +1,43 @@
+extensions:
+  # ============================================================
+  # Summaries — result4k taint propagation through Result wrappers
+  # Library: dev.forkhandles:result4k (used by http4k core, oauth, lambda)
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- Success/Failure constructors — wrap tainted data ---
+      - ["dev.forkhandles.result4k", "Success", false, "Success", "(Object)", "", "Argument[0]", "Argument[this]", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "Failure", false, "Failure", "(Object)", "", "Argument[0]", "Argument[this]", "taint", "manual"]
+
+      # --- Success/Failure value extraction ---
+      - ["dev.forkhandles.result4k", "Success", false, "getValue", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "Success", false, "component1", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "Failure", false, "getReason", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "Failure", false, "component1", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Extension functions (Result.kt → ResultKt) ---
+      # asSuccess/asFailure wrap a value into Result
+      - ["dev.forkhandles.result4k", "ResultKt", false, "asSuccess", "(Object)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "ResultKt", false, "asFailure", "(Object)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # map/flatMap/mapFailure/flatMapFailure — transform Result, preserving taint
+      - ["dev.forkhandles.result4k", "ResultKt", false, "map", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "ResultKt", false, "flatMap", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "ResultKt", false, "mapFailure", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "ResultKt", false, "flatMapFailure", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # recover/onFailure — return Result unchanged or with fallback
+      - ["dev.forkhandles.result4k", "ResultKt", false, "recover", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "ResultKt", false, "onFailure", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # peek/peekFailure — side-effect, return Result unchanged
+      - ["dev.forkhandles.result4k", "ResultKt", false, "peek", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "ResultKt", false, "peekFailure", "(Result,Function1)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- Nullable extensions (Nullables.kt → NullablesKt) ---
+      - ["dev.forkhandles.result4k", "NullablesKt", false, "valueOrNull", "(Result)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["dev.forkhandles.result4k", "NullablesKt", false, "asResultOr", "(Object,Function0)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
