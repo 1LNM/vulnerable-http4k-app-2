@@ -39,23 +39,15 @@ fun uriCopyArgXss(request: Request): Response {
         .body("<html>URI: $copied</html>")
 }
 
-// --- MultipartFormBody.from: does taint flow from request through factory? ---
-// Model: summaryModel MultipartFormBody$Companion.from Arg[0]→ReturnValue
-// NOT DETECTED — investigating whether break is at from() or fieldValue()
+// --- MultipartFormBody.from: KNOWN GAP ---
+// NOT DETECTED. from() has default params → compiles to from$default.
+// Tested all type/arg combinations for $default — none match. Break is at from(),
+// not fieldValue() (confirmed via diagnostic endpoint that bypassed fieldValue).
 fun multiFromFactoryXss(request: Request): Response {
     val mpBody = MultipartFormBody.from(request)
     val value = mpBody.fieldValue("name") ?: "none"
     return Response(Status.OK).header("Content-Type", "text/html")
         .body("<html>Field: $value</html>")
-}
-
-// --- Diagnostic: isolate whether from() propagates taint at all ---
-// If this fires but multiFromFactoryXss doesn't, the break is at fieldValue.
-// If neither fires, the break is at from/from$default.
-fun multiFromDiagnostic(request: Request): Response {
-    val mpBody = MultipartFormBody.from(request)
-    return Response(Status.OK).header("Content-Type", "text/html")
-        .body("<html>Body: $mpBody</html>")
 }
 
 // --- Neutral model test: request.method echo ---

@@ -15,10 +15,10 @@ Model files go in `.github/codeql/extensions/models/`.
 Naming convention: `http4k-<module>.model.yml` for http4k modules, `<library>.model.yml` for
 external dependencies.
 
-Current model files (11 files, 184 entries — 5 source, 6 sink, 8 summary blocks, 1 barrier):
+Current model files (11 files, 186 entries — 5 source, 6 sink, 8 summary blocks, 1 barrier):
 
 **http4k modules:**
-1. `http4k-core.model.yml` (102) - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks (response-splitting sink removed — http4k sanitizes CR/LF)
+1. `http4k-core.model.yml` (104) - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, Uri.copy$default (response-splitting sink removed — http4k sanitizes CR/LF)
 2. `http4k-lens.model.yml` (17) - LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries
 3. `http4k-routing.model.yml` (3) - ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot **barrier** (path-injection sanitizer)
 4. `http4k-filter.model.yml` (1) - ServerFilters.CatchAll stack trace leak summary
@@ -110,8 +110,17 @@ The receiver becomes `Argument[0]`, and `subtypes` should be `false` (static met
 **Default parameter pattern:** Methods with default parameters compile to a `$default` variant.
 E.g. `fun credentials(charset: Charset = UTF_8)` → JVM method `credentials$default(Uri, Charset, int, Object)`.
 Model both the original name and the `$default` variant, or use `""` for method name to match all.
+For instance methods, `$default` is static: `Argument[0]` = receiver, `Argument[1..N]` = params.
+For data class `copy`, use `Argument[0]` (receiver) and `Argument[1..N]` (fields).
 
 **Companion factory pattern:** `Request(Method, String)` may compile to `Request$Companion.create$default(...)` instead of `invoke`. Check telemetry for actual JVM method names.
+
+**Known companion `$default` limitation:** Companion object methods with default parameters
+(e.g. `MultipartFormBody.from(request)`) compile to `from$default` on the companion class.
+Testing showed that MaD entries for companion `$default` methods do NOT match — all combinations
+of type (`$Companion` vs outer class) and argument index were tried with no result. The underlying
+`from` entry is kept for explicit-arg calls, but callers using defaults will not be tracked.
+This does not affect instance-method `$default` variants (e.g. `Uri.copy$default` works correctly).
 
 ## Modelling Design Decisions
 
@@ -442,6 +451,25 @@ extends `AutoMarshalling`, which is already modelled in `http4k-format.model.yml
   one produces zero alerts). The limitation is CodeQL's ViewModel field-flow tracking, not the
   model signature — the entry is kept and treated like the `uriRequestSource` / `miscCurl`
   known-gap exclusions. `expectations.json` therefore declares TemplateRoutes.kt at 7 XSS, not 8.
+
+### Comparison plan verification results
+
+Tested model entries against CodeQL to determine what is natively handled vs what requires
+custom models. Results from `ComparisonPlanRoutes.kt` (84 total alerts, 86 endpoints):
+
+| Pattern | Result | Analysis |
+|---------|--------|----------|
+| `Uri.toString()` | Detected | Works — may be CodeQL-native (Java toString is fundamental) |
+| `Uri.copy(path=x)` receiver taint | Detected | Requires `copy$default` model (instance method $default works) |
+| `Uri.copy(path=input)` arg taint | Detected | Same — `Argument[1..7]` range on `copy$default` |
+| `MultipartFormBody.from(request)` | NOT detected | Companion `$default` limitation (see Kotlin-to-JVM section) |
+| `request.method.name` echo | Correctly silent | `Method` is an enum — no false positive, no neutral needed |
+
+**Neutral models (`neutralModel`) are not needed** for our current model set. The comparison plan
+identified `Filter.invoke`, `Response.getStatus`, and `Request.getMethod` as candidates. Testing
+confirmed `getMethod` does not produce false positives (enum type). Our sink-on-`Response`
+approach (not `HttpMessage`) already avoids the `Request.body`/`Request.header` false positives
+that other model sets need neutrals to suppress.
 
 ### When to add a new dependency model
 

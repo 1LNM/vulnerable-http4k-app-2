@@ -39,10 +39,9 @@ extensions:
       - ["org.http4k.core", "MultipartFormBody", false, "fieldValue", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
       - ["org.http4k.core", "MultipartFormBody", false, "fieldValues", "", "", "Argument[this]", "ReturnValue", "taint", "manual"]
 
-      # --- MultipartFormBody.from(Request) — factory creates body from request ---
+      # --- MultipartFormBody.from(HttpMessage) — factory creates body from request ---
+      # KNOWN GAP: from() has default params, compiles to from$default. Tested all
+      # combinations of type (Companion vs outer) and arg index (0 vs 1) — none match.
+      # CodeQL's Kotlin extractor represents companion $default calls in a way MaD
+      # cannot currently target. Kept for when called with all explicit args.
       - ["org.http4k.core", "MultipartFormBody$Companion", false, "from", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-      # Kotlin default params: try both Companion type and outer class, both arg indices
-      - ["org.http4k.core", "MultipartFormBody$Companion", false, "from$default", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-      - ["org.http4k.core", "MultipartFormBody$Companion", false, "from$default", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
-      - ["org.http4k.core", "MultipartFormBody", false, "from$default", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-      - ["org.http4k.core", "MultipartFormBody", false, "from$default", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]

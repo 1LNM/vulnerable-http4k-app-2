@@ -131,7 +131,6 @@ fun main() {
         "/verify/uri-copy-this" bind GET to ::uriCopyThisXss,
         "/verify/uri-copy-arg" bind GET to ::uriCopyArgXss,
         "/verify/multi-from-factory" bind POST to ::multiFromFactoryXss,
-        "/verify/multi-from-diagnostic" bind POST to ::multiFromDiagnostic,
         "/verify/method-echo" bind GET to ::requestMethodEcho
     )
 
