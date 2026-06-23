@@ -61,9 +61,11 @@ extensions:
       - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
       - ["org.http4k.core", "Response", true, "replaceHeader", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]
 
-      # --- Response header injection (response-splitting) — header name AND value ---
-      - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[0]", "response-splitting", "manual"]
-      - ["org.http4k.core", "Response", true, "header", "(String,String)", "", "Argument[1]", "response-splitting", "manual"]
+      # NOTE: Response.header is intentionally NOT modelled as a response-splitting sink.
+      # http4k strips CR/LF from header names and values internally (sanitizeHeader ->
+      # withoutCrLf, called inside Response.header/headers/replaceHeaders in http.kt), so HTTP
+      # response splitting is not exploitable via header(). Modelling it as a sink produced
+      # false positives. See SanitizerRoutes / docs for the framework-sanitization rationale.
 
       # --- Request query manipulation ---
       - ["org.http4k.core", "Request", true, "query", "(String,String)", "", "Argument[1]", "url-redirection", "manual"]

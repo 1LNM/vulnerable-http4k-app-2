@@ -13,11 +13,14 @@ Test application for validating [CodeQL MaD (Models as Data)](https://codeql.git
 
 ```
 CLAUDE.md                        # Modelling reference, design decisions, format docs
+scripts/
+  check_findings.py             # Deterministic SARIF assertion harness (CI gate)
+  expectations.json             # Expected (must-be-present) / forbidden (must-be-absent) findings
 .github/
   codeql/extensions/models/     # 11 custom MaD model YAML files (by module/library)
-  workflows/codeql.yml          # CodeQL CI workflow (build-mode: manual)
+  workflows/codeql.yml          # CodeQL CI workflow (build-mode: manual) + findings gate
 src/main/kotlin/com/example/vulnerable/
-  App.kt                        # Route registration (79 endpoints)
+  App.kt                        # Route registration (81 endpoints)
   model/UserInput.kt            # Data class for JSON deserialization tests
   routes/
     XssRoutes.kt                # 10 endpoints - reflected XSS
@@ -33,9 +36,11 @@ src/main/kotlin/com/example/vulnerable/
     MiscRoutes.kt               #  4 endpoints - parse, curl, params, JSON
     ClientSsrfRoutes.kt         #  4 endpoints - HTTP client SSRF
     LogInjectionRoutes.kt       #  3 endpoints - log injection
-    ResponseSplittingRoutes.kt  #  2 endpoints - HTTP response splitting
+    ResponseSplittingRoutes.kt  #  2 endpoints - framework-prevented splitting (negative)
     Result4kRoutes.kt           # 16 endpoints - result4k taint flow (full API coverage)
     TemplateRoutes.kt           #  7 endpoints - Handlebars template XSS/SSTI + http4k Templates
+    SanitizerControlRoutes.kt   #  1 endpoint  - barrier control (MUST alert)
+    SanitizerRoutes.kt          #  1 endpoint  - barrier treatment (MUST NOT alert)
 ```
 
 ## Custom Model Files
@@ -44,9 +49,9 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 
 | File | Entries | Coverage |
 |------|---------|----------|
-| `http4k-core.model.yml` | 104 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, response-splitting sinks, Uri.toString/copy summaries |
+| `http4k-core.model.yml` | 102 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, Uri.toString/copy summaries (response-splitting sink removed — http4k sanitizes CR/LF) |
 | `http4k-lens.model.yml` | 17 | LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries |
-| `http4k-routing.model.yml` | 3 | ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot sanitizer |
+| `http4k-routing.model.yml` | 3 | ExtensionsKt.path source, ResourceLoader.load sink, **resolvedWithinRoot barrier** (path-injection sanitizer) |
 | `http4k-filter.model.yml` | 1 | ServerFilters.CatchAll stack trace leak |
 | `http4k-multipart.model.yml` | 16 | MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody, MultipartFormBody.from summary |
 | `http4k-format.model.yml` | 6 | AutoMarshalling asA/stringAsA/asFormatString/convert, Json.parse |
@@ -56,11 +61,12 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 | `handlebars.model.yml` | 10 | Template.apply sinks (html-injection), Handlebars.compileInline sink (template-injection), Context.combine/Template.apply/compileInline summaries |
 | `result4k.model.yml` | 18 | Success/Failure constructors and extractors, ResultKt map/flatMap/recover/peek, NullablesKt valueOrNull/asResultOr |
 
-**Total: 186 model entries.**
+**Total: 184 model entries** (5 source, 6 sink, 8 summary blocks, 1 barrier).
 
 ## Expected Findings
 
-75 distinct source-to-sink taint paths across 10 vulnerability categories (23 pending CI validation).
+74 distinct source-to-sink taint paths across 9 vulnerability categories (24 pending CI validation),
+plus negative tests asserting barriers and framework sanitization suppress findings.
 
 ### XSS (CWE-079) — core http4k — 20 paths
 
@@ -136,15 +142,6 @@ inline `Response.body(String)` sink (one alert per entry). Validates every `resu
 | redirect-05 | redirectCookieSrc | `CookieExtensionsKt.cookie()` | `Response.header(Location)` | Detected |
 | redirect-06 | splitHeaderValue | `Request.query()` | `Response.header(name, tainted)` | Detected |
 
-### HTTP Response Splitting (CWE-113) — 2 paths
-
-| ID | Function | Source | Sink | Status |
-|----|----------|--------|------|--------|
-| split-01 | splitHeaderName | `Request.query()` | `Response.header(tainted, value)` | Detected |
-| split-02 | splitHeaderValue | `Request.query()` | `Response.header(name, tainted)` | Detected |
-
-**Bonus findings:** CodeQL also detects response-splitting on 3 existing redirect endpoints (redirectHeader, redirectTemplate, redirectCookieSrc) since `Response.header` value is now also a response-splitting sink.
-
 ### Template Injection (CWE-1336) — 2 paths
 
 | ID | Function | Source | Sink |
@@ -202,6 +199,22 @@ inline `Response.body(String)` sink (one alert per entry). Validates every `resu
 | path-01 | pathQuery | `Request.query()` | `ResourceLoader.load()` | Detected |
 | path-02 | pathHeader | `Request.header()` | `ResourceLoader.load()` | Detected |
 | path-03 | multiFileName | `MultipartFormFile.getFilename()` | `ResourceLoader.load()` | Detected |
+| path-04 | pathControlUnsanitized | `Request.query()` | `ResourceLoader.load()` | Pending |
+
+### Negative Tests — Barriers & Framework Sanitization
+
+These assert the **absence** of a finding. A negative test is only meaningful next to a control
+that *does* alert and is otherwise identical, so the silence is attributable to the sanitizer.
+Verified deterministically by `scripts/check_findings.py` (a passing negative test that lost its
+alert for the wrong reason would also lose its control, failing the check).
+
+| Test | Control (MUST alert) | Treatment (MUST NOT alert) | Difference |
+|------|----------------------|----------------------------|------------|
+| `resolvedWithinRoot` barrier | `pathControlUnsanitized` (SanitizerControlRoutes.kt) | `pathResolvedWithinRoot` (SanitizerRoutes.kt) | `.resolvedWithinRoot()` before `load()` |
+| Response splitting (framework) | — (http4k strips CR/LF internally) | `splitHeaderName`, `splitHeaderValue`, redirect endpoints | `Response.header` sanitizes via `withoutCrLf` |
+
+The response-splitting case has no user-callable control because the sanitization is internal to
+`Response.header()`; it is documented as a known framework guarantee, and the sink was removed.
 
 ### Summary
 
@@ -211,22 +224,45 @@ inline `Response.body(String)` sink (one alert per entry). Validates every `resu
 | XSS — result4k | 16 | Pending |
 | XSS — Handlebars | 5 | Pending |
 | Redirect | 6 | 6 |
-| Response Splitting | 2 | 2 |
 | Template Injection | 2 | Pending |
 | SSRF | 6 | 6 |
 | Client SSRF | 4 | 4 |
 | SQL Injection | 8 | 8 |
 | Command Injection | 3 | 3 |
-| Path Injection | 3 | 3 |
-| **Total** | **75** | **Pending** |
+| Path Injection | 4 | Pending |
+| **Total (positive paths)** | **74** | **Pending** |
 
-**Pending:** 23 newly-added paths (16 result4k + 5 Handlebars XSS + 2 SSTI) await CI validation.
-Three previously-validated paths (result4kSuccessXss, result4kMapXss, result4kValueOrNullXss,
-handlebarsXss, handlebarsSsti) are now part of the expanded full-coverage suite.
+| Negative test | Expectation |
+|---------------|-------------|
+| `pathResolvedWithinRoot` | no `java/path-injection` (barrier) |
+| `ResponseSplittingRoutes` / redirects | no `java/http-response-splitting` (framework CR/LF stripping) |
 
-**Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS), and from redirect endpoints that also match response-splitting. These are true positives not listed above.
+**Pending:** 24 newly-added/changed paths (16 result4k + 5 Handlebars XSS + 2 SSTI + 1 path
+control) await CI validation, plus the 2 negative-test assertions. Response Splitting was removed
+as a category — http4k sanitizes CR/LF internally, so those were false positives.
+
+**Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS). These are true positives not listed above.
 
 **Log injection:** 3 test endpoints exist (LogInjectionRoutes.kt) but `java/log-injection` is not included in CodeQL's default security query suite. The endpoints validate that http4k sources flow into logging sinks if the query is enabled.
+
+## Deterministic Testing
+
+CodeQL cannot run locally (CI only), and eyeballing scan results — especially the *absence* of a
+finding — is not reliable. `scripts/check_findings.py` parses the SARIF output and asserts it
+against `scripts/expectations.json`:
+
+- **`expected`** — findings that MUST be present (positive controls: sinks/flows fire).
+- **`forbidden`** — findings that MUST be absent (barriers and framework sanitization suppress them).
+
+Matching is by `ruleId` + a substring of the result's file path. The script is dependency-free
+(Python 3 stdlib) and exits non-zero on any mismatch, so the CI workflow fails on regression:
+
+```bash
+python3 scripts/check_findings.py sarif-results scripts/expectations.json
+```
+
+Run it locally against a downloaded SARIF (`gh run download ... --name codeql-sarif`) to reproduce
+the CI gate. Extend coverage by adding rows to `expectations.json` — no code changes needed.
 
 ### Key Learnings
 
@@ -244,7 +280,8 @@ The GitHub Actions workflow (`.github/workflows/codeql.yml`) runs on every push 
 3. Initializes CodeQL with `build-mode: manual`
 4. Builds with `./gradlew clean assemble --no-daemon`
 5. Runs CodeQL analysis (auto-discovers model files from `.github/codeql/extensions/`)
-6. Uploads SARIF as a downloadable artifact
+6. Uploads SARIF as a downloadable artifact (always, even on failure)
+7. Runs `scripts/check_findings.py` as a gate — the build fails if expected findings are missing or forbidden findings appear
 
 ## Iteration Workflow
 

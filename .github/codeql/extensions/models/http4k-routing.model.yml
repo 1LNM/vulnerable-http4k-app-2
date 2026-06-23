@@ -20,11 +20,14 @@ extensions:
       - ["org.http4k.routing", "ResourceLoader", true, "load", "(String)", "", "Argument[0]", "path-injection", "manual"]
 
   # ============================================================
-  # Summaries
+  # Barriers (sanitizers)
   # ============================================================
   - addsTo:
       pack: codeql/java-all
-      extensible: summaryModel
+      extensible: barrierModel
     data:
-      # resolvedWithinRoot() — path sanitization (resourcePath.kt → ResourcePathKt)
-      - ["org.http4k.routing", "ResourcePathKt", false, "resolvedWithinRoot", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # Columns: package, type, subtypes, name, signature, ext, OUTPUT, KIND, provenance
+      # String.resolvedWithinRoot() (resourcePath.kt → ResourcePathKt) sanitizes path traversal:
+      # rejects null bytes and backslashes, resolves "." / ".." within the root, returns null if
+      # the path escapes. Its return value is safe for path-injection sinks.
+      - ["org.http4k.routing", "ResourcePathKt", false, "resolvedWithinRoot", "", "", "ReturnValue", "path-injection", "manual"]

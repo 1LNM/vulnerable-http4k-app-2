@@ -120,7 +120,11 @@ fun main() {
         "/template/handlebars-apply-context" bind GET to ::handlebarsApplyContext,
         "/template/handlebars-apply-context-map" bind GET to ::handlebarsApplyContextMap,
         "/template/handlebars-compile-delims" bind GET to ::handlebarsCompileInlineDelims,
-        "/template/render-to-response" bind GET to ::templateRenderToResponse
+        "/template/render-to-response" bind GET to ::templateRenderToResponse,
+
+        // Sanitizer barrier validation — control (MUST alert) vs treatment (MUST NOT alert)
+        "/sanitizer/path-control" bind GET to ::pathControlUnsanitized,
+        "/sanitizer/path-resolved-within-root" bind GET to ::pathResolvedWithinRoot
     )
 
     val server = app.asServer(Netty(8080)).start()

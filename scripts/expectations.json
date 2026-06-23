@@ -1,0 +1,49 @@
+{
+  "_comment": "Deterministic CodeQL expectations. 'expected' findings MUST be present; 'forbidden' findings MUST be absent. Matching is by ruleId plus a substring of the SARIF result file path. See scripts/check_findings.py.",
+
+  "expected": [
+    {
+      "rule": "java/path-injection",
+      "file": "SanitizerControlRoutes.kt",
+      "why": "Control: load(query) with no sanitizer must be flagged. Proves the sink + flow work, so the matching treatment's silence is attributable to the barrier."
+    },
+    {
+      "rule": "java/path-injection",
+      "file": "PathInjectionRoutes.kt",
+      "why": "Baseline path-injection coverage (pathQuery / pathHeader)."
+    },
+    {
+      "rule": "java/xss",
+      "file": "XssRoutes.kt",
+      "why": "Baseline reflected-XSS coverage."
+    },
+    {
+      "rule": "java/sql-injection",
+      "file": "SqlInjectionRoutes.kt",
+      "why": "Baseline SQL-injection coverage."
+    },
+    {
+      "rule": "java/ssrf",
+      "file": "SsrfRoutes.kt",
+      "why": "Baseline SSRF coverage."
+    }
+  ],
+
+  "forbidden": [
+    {
+      "rule": "java/path-injection",
+      "file": "SanitizerRoutes.kt",
+      "why": "Treatment: identical to the control except for resolvedWithinRoot(). The barrier model must suppress the path-injection finding. Any alert here means the barrier failed."
+    },
+    {
+      "rule": "java/http-response-splitting",
+      "file": "ResponseSplittingRoutes.kt",
+      "why": "http4k strips CR/LF from header names/values internally (sanitizeHeader -> withoutCrLf), so response splitting via Response.header is not exploitable. The sink was removed; no alert should appear."
+    },
+    {
+      "rule": "java/http-response-splitting",
+      "file": "RedirectRoutes.kt",
+      "why": "Same framework-internal CR/LF sanitization applies to the redirect endpoints."
+    }
+  ]
+}

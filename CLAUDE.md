@@ -20,7 +20,7 @@ Current model files (11 files, 186 entries):
 **http4k modules:**
 1. `http4k-core.model.yml` (104) - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, response-splitting sinks
 2. `http4k-lens.model.yml` (17) - LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries
-3. `http4k-routing.model.yml` (3) - ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot sanitizer
+3. `http4k-routing.model.yml` (3) - ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot **barrier** (path-injection sanitizer)
 4. `http4k-filter.model.yml` (1) - ServerFilters.CatchAll stack trace leak summary
 5. `http4k-multipart.model.yml` (16) - MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody sources and summaries
 6. `http4k-format.model.yml` (6) - AutoMarshalling.asA/stringAsA/asFormatString/convert summaries, Json.parse
@@ -139,6 +139,41 @@ under `HttpMessage`, sinking on `Response` avoids false positives where `Request
 `Request.header()` would be flagged as XSS or response-splitting — those set outgoing request
 data, not browser-rendered response data. This eliminates the need for `neutralModel` entries
 to suppress Request-side false positives.
+
+### Barriers (sanitizers): model real http4k sanitizers, test with controls
+
+Java/Kotlin MaD supports `barrierModel(package, type, subtypes, name, signature, ext, output,
+kind, provenance)` — `output` is the sanitized node (usually `ReturnValue`) and `kind` is the same
+threat string as the sink it blocks (e.g. `path-injection`). http4k has genuine sanitizers worth
+modelling as barriers:
+
+- `String.resolvedWithinRoot()` (`ResourcePathKt`) — path-traversal sanitizer (rejects null bytes
+  and backslashes, resolves `..`, returns null on escape). Modelled as a `path-injection` barrier.
+  It was previously (incorrectly) a taint **summary**, which made the sanitizer transparent — a
+  pass-through summary on a sanitizer is a bug.
+
+Other user-callable candidates not yet modelled: `String.urlEncoded()` / `base64Encode()` /
+`quoted()` (`KotlinExtensionsKt`).
+
+**Testing a barrier requires a control/treatment pair.** A barrier suppresses a finding, so you
+cannot validate it with a normal "this should alert" endpoint. Use two endpoints that are
+byte-for-byte identical except for the sanitizer call, in **separate files** so the harness can
+assert at file granularity:
+- `SanitizerControlRoutes.kt` — the unsanitized twin; MUST alert (proves the sink/flow work).
+- `SanitizerRoutes.kt` — the sanitized twin; MUST NOT alert (proves the barrier suppresses it).
+
+If only the difference is the sanitizer, a missing alert in the treatment is attributable to the
+barrier and nothing else.
+
+### Framework-internal sanitization: remove the sink, don't model a barrier
+
+`Response.header(name, value)` strips CR/LF from both name and value internally (`sanitizeHeader`
+-> `withoutCrLf`, called inside `header`/`headers`/`replaceHeaders` in http.kt). HTTP response
+splitting is therefore not exploitable via http4k headers. The sanitization is `internal` (not
+user-callable), so it cannot be expressed as a `barrierModel`; the correct fix is to **not model
+`Response.header` as a `response-splitting` sink at all**. We removed it (it was a false positive)
+and document the guarantee instead. The `ResponseSplittingRoutes.kt` endpoints remain as negative
+tests asserting no `java/http-response-splitting` alert appears.
 
 ### HTTP client SSRF: interfaces, not implementations
 
@@ -336,6 +371,28 @@ doesn't detect the endpoint, investigate the model entry.
 - `java/js-injection` is NOT in CodeQL's default security suite — adding `js-injection` kind would duplicate `java/xss` alerts
 - Line number shifts from import changes can cause CodeQL to close and re-create alerts (not a real loss)
 
+## Deterministic Testing
+
+CodeQL runs only in CI, and reading scan results by eye (or via an LLM) is not a reliable test —
+especially for **negative** assertions, where "no alert" could mean the barrier worked OR the flow
+broke for an unrelated reason. The deterministic layer is `scripts/check_findings.py` +
+`scripts/expectations.json`:
+
+- `expected` — findings that MUST be present (positive controls).
+- `forbidden` — findings that MUST be absent (barriers, framework sanitization).
+- Matching is `ruleId` + a substring of the SARIF result's file path. Dependency-free (stdlib),
+  exits non-zero on mismatch. The CI workflow runs it as a gate after analysis.
+
+Why this layer and not JVM unit tests: the models only have meaning when CodeQL runs, so the
+assertions live at the SARIF level, not in JUnit. (A future complement would be runtime tests that
+prove the endpoints are *actually* exploitable/safe, independent of CodeQL — e.g. that
+`pathResolvedWithinRoot` really rejects `../`.)
+
+To keep negative tests honest, pair every barrier endpoint with an identical control in a separate
+file (see the barriers design note) and encode both in `expectations.json`: the control under
+`expected`, the treatment under `forbidden`. If a refactor silently breaks the flow, the control's
+`expected` entry fails too — so a passing `forbidden` can only mean the barrier did its job.
+
 ## Dependency Models
 
 Beyond http4k's own API surface, we model key libraries that http4k depends on or that are
@@ -351,8 +408,10 @@ Current dependency model files:
   by `http4k-template-handlebars`. `Template.apply` is an `html-injection` sink (XSS via context
   data), `Handlebars.compileInline` is a `template-injection` sink (SSTI via user-controlled
   template string).
-- `http4k-template.model.yml` — `org.http4k.template` (2 summaries). The http4k template
-  abstraction layer: `TemplatesKt.renderToResponse` propagates taint from ViewModel to Response.
+- `http4k-template.model.yml` — `org.http4k.template` (2 sinks). `TemplatesKt.renderToResponse`
+  (and its `$default` variant) is an `html-injection` sink: a tainted ViewModel rendered into the
+  response is XSS. Modelled as a sink, not a summary — a summary→ReturnValue never reaches a sink
+  because the Response is just returned.
 
 **Klaxon** (`com.beust.klaxon`) does NOT need a separate model file — `ConfigurableKlaxon`
 extends `AutoMarshalling`, which is already modelled in `http4k-format.model.yml` with

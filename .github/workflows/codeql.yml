@@ -42,8 +42,12 @@ jobs:
           output: sarif-results
 
       - name: Upload SARIF as artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif
           path: sarif-results/
           retention-days: 30
+
+      - name: Check findings against expectations
+        run: python3 scripts/check_findings.py sarif-results scripts/expectations.json
