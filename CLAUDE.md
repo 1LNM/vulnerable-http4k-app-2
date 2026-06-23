@@ -358,6 +358,21 @@ Current dependency model files:
 extends `AutoMarshalling`, which is already modelled in `http4k-format.model.yml` with
 `subtypes: true`.
 
+### Known precision tradeoffs in dependency models
+
+- **`Template.apply` (Handlebars) is modelled as an unconditional `html-injection` sink**, but
+  Handlebars auto-escapes `{{x}}` by default — only `{{{x}}}` (triple-stache) and `SafeString`
+  bypass escaping. In real-world apps this produces false positives on safe escaped templates.
+  Accepted here because the test app's purpose is detection coverage, and our test endpoint uses
+  genuinely-unsafe `{{{this}}}`. A more precise model would only flag SafeString/triple-stache,
+  which MaD cannot express.
+- **Some dependency entries are defensive (no test endpoint).** The result4k file models the full
+  Result API surface (Failure, asSuccess/asFailure, flatMap, recover, peek, etc.) but only a
+  subset (Success ctor, getValue, map, valueOrNull) is exercised by test endpoints. Similarly
+  `Context.combine` (handlebars) and `renderToResponse`/`then` (http4k-template) are unvalidated.
+  These are kept for resilience when scanning real apps; the README's detection rate counts only
+  paths that have endpoints, so unvalidated entries are not reflected there.
+
 ### When to add a new dependency model
 
 Add a model file for a library when:

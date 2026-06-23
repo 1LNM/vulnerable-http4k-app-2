@@ -5,7 +5,7 @@ Test application for validating [CodeQL MaD (Models as Data)](https://codeql.git
 ## Stack
 
 - Kotlin 2.2.0 (must stay below 2.3.30 for CodeQL compatibility)
-- http4k 6.53.0.0
+- http4k 6.52.0.0
 - JDK 21, Gradle 8.12
 - H2 in-memory database (for SQL injection endpoints)
 
@@ -93,7 +93,7 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 
 **Excluded from count:**
 - xss-13 (uriRequestSource): `RequestSource` is modelled as `local` source, not `remote` — CodeQL correctly does not flag it as XSS
-- xss-19 (miscCurl): Requires the `Request` object itself to carry taint, which CodeQL doesn't support (only method return values are tainted)
+- miscCurl: Requires the `Request` object itself to carry taint, which CodeQL doesn't support (only method return values are tainted)
 
 ### URL Redirect (CWE-601) — 6 paths
 
