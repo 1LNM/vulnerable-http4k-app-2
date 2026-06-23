@@ -86,10 +86,10 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 | xss-19 | miscParse | `Request.bodyString()` | `Response.body(String)` | Detected |
 | xss-20 | miscParams | `Request.getUri()` | `Response.body(String)` | Detected |
 | xss-21 | miscJsonConvert | `Request.bodyString()` | `Response.body(String)` | Detected |
-| xss-22 | result4kSuccessXss | `Request.query()` | `Response.body(String)` via `Success.value` | Pending |
-| xss-23 | result4kMapXss | `Request.query()` | `Response.body(String)` via `Result.map` | Pending |
-| xss-24 | result4kValueOrNullXss | `Request.query()` | `Response.body(String)` via `valueOrNull` | Pending |
-| xss-25 | handlebarsXss | `Request.query()` | `Template.apply()` | Pending |
+| xss-22 | result4kSuccessXss | `Request.query()` | `Response.body(String)` via `Success.value` | Detected |
+| xss-23 | result4kMapXss | `Request.query()` | `Response.body(String)` via `Result.map` | Detected |
+| xss-24 | result4kValueOrNullXss | `Request.query()` | `Response.body(String)` via `valueOrNull` | Detected |
+| xss-25 | handlebarsXss | `Request.query()` | `Template.apply()` | Detected |
 
 **Excluded from count:**
 - xss-13 (uriRequestSource): `RequestSource` is modelled as `local` source, not `remote` — CodeQL correctly does not flag it as XSS
@@ -119,7 +119,7 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 
 | ID | Function | Source | Sink | Status |
 |----|----------|--------|------|--------|
-| ssti-01 | handlebarsSsti | `Request.query()` | `Handlebars.compileInline(String)` | Pending |
+| ssti-01 | handlebarsSsti | `Request.query()` | `Handlebars.compileInline(String)` | Detected |
 
 ### SSRF / Request Forgery (CWE-918) — 6 paths
 
@@ -176,22 +176,24 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 
 | Category | Expected | Detected |
 |----------|----------|----------|
-| XSS | 24 | Pending |
+| XSS | 24 | 24 |
 | Redirect | 6 | 6 |
 | Response Splitting | 2 | 2 |
-| Template Injection | 1 | Pending |
+| Template Injection | 1 | 1 |
 | SSRF | 6 | 6 |
 | Client SSRF | 4 | 4 |
 | SQL Injection | 8 | 8 |
 | Command Injection | 3 | 3 |
 | Path Injection | 3 | 3 |
-| **Total** | **57** | **Pending** |
+| **Total** | **57** | **57** |
 
-**Pending:** 5 new paths (4 XSS via result4k/handlebars + 1 SSTI) await CI validation.
+**100% detection rate** on all expected source-to-sink paths.
 
 **Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS), and from redirect endpoints that also match response-splitting. These are true positives not listed above.
 
 **Log injection:** 3 test endpoints exist (LogInjectionRoutes.kt) but `java/log-injection` is not included in CodeQL's default security query suite. The endpoints validate that http4k sources flow into logging sinks if the query is enabled.
+
+**Last CI run:** 66 distinct CodeQL alerts (includes bonus findings and consolidated SQL alerts).
 
 ### Key Learnings
 
