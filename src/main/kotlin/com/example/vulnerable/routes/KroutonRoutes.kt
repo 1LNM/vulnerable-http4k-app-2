@@ -1,25 +1,28 @@
 package com.example.vulnerable.routes
 
-import com.natpryce.krouton.PathElementType
-import com.natpryce.krouton.splitPath
+import com.natpryce.krouton.root
+import com.natpryce.krouton.`string`
+import com.natpryce.krouton.div
+import com.natpryce.krouton.parse
 import org.http4k.core.*
 
-// Krouton path extraction: tainted URL path → splitPath → segments → body
+// Krouton path extraction: tainted URL path → route parse → extracted value → body
 
-// splitPath: URL path string → List<String> segments
-fun kroutonSplitPath(request: Request): Response {
+private val userRoute = root / "users" / `string`
+
+// Route parse: URI path → krouton template parse → extracted string → body
+fun kroutonPathString(request: Request): Response {
     val path = request.uri.path
-    val segments = splitPath(path)
-    val value = segments.firstOrNull() ?: "none"
+    val parsed = userRoute.parse(path)
+    val value = parsed?.component1() ?: "none"
     return Response(Status.OK).header("Content-Type", "text/html")
-        .body("<html>Segment: $value</html>")
+        .body("<html>User: $value</html>")
 }
 
-// PathElementType.parsePathElement: segment string → typed value
+// PathElementType.parsePathElement: direct segment parsing
 fun kroutonParseElement(request: Request): Response {
     val input = request.query("segment") ?: "default"
-    val stringType: PathElementType<String> = com.natpryce.krouton.`string`
-    val parsed = stringType.parsePathElement(input)
+    val parsed = `string`.parsePathElement(input)
     return Response(Status.OK).header("Content-Type", "text/html")
         .body("<html>Parsed: $parsed</html>")
 }

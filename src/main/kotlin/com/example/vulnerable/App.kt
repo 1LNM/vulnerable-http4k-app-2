@@ -167,7 +167,7 @@ fun main() {
         "/arrow/option-map" bind GET to ::arrowOptionMap,
 
         // Krouton — URL path extraction
-        "/krouton/split-path/{segment}" bind GET to ::kroutonSplitPath,
+        "/krouton/users/{name}" bind GET to ::kroutonPathString,
         "/krouton/parse-element" bind GET to ::kroutonParseElement
     )
 

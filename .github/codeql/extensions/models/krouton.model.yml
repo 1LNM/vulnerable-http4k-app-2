@@ -8,12 +8,9 @@ extensions:
     data:
       # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
 
-      # --- splitPath — splits URL path string into segments ---
-      - ["com.natpryce.krouton", "PathTemplateKt", false, "splitPath", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
-
-      # --- parse — parses path against a template, extracts typed values ---
-      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "(PathTemplate,List)", "", "Argument[1]", "ReturnValue", "taint", "manual"]
-      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "(PathTemplate,String)", "", "Argument[1]", "ReturnValue", "taint", "manual"]
+      # --- parse — extension function on PathTemplate, parses path string ---
+      # splitPath is internal; parse is the public API that calls it
+      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
 
       # --- PathElementType.parsePathElement — parses individual segment ---
       - ["com.natpryce.krouton", "PathElementType", true, "parsePathElement", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
