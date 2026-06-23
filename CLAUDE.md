@@ -12,18 +12,25 @@ names, types, and method signatures. **Do not modify the http4k source.**
 
 Model files go in `.github/codeql/extensions/models/`.
 
-Naming convention: `http4k-<module>.model.yml`
+Naming convention: `http4k-<module>.model.yml` for http4k modules, `<library>.model.yml` for
+external dependencies.
 
-Current model files (organized by http4k module):
+Current model files (11 files, 186 entries):
 
-1. `http4k-core.model.yml` - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, response-splitting sinks
-2. `http4k-lens.model.yml` - LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries
-3. `http4k-routing.model.yml` - ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot sanitizer
-4. `http4k-filter.model.yml` - ServerFilters.CatchAll stack trace leak summary
-5. `http4k-multipart.model.yml` - MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody sources and summaries
-6. `http4k-format.model.yml` - AutoMarshalling.asA/stringAsA/asFormatString/convert summaries, Json.parse
-7. `http4k-realtime.model.yml` - WsMessage body, SseMessage Data/Event sources
-8. `http4k-client.model.yml` - DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks
+**http4k modules:**
+1. `http4k-core.model.yml` (104) - Request/Response/Uri/Body/Cookie/Credentials/Parameters sources, sinks, and summaries. Includes form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, response-splitting sinks
+2. `http4k-lens.model.yml` (17) - LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries
+3. `http4k-routing.model.yml` (3) - ExtensionsKt.path source, ResourceLoader.load sink, resolvedWithinRoot sanitizer
+4. `http4k-filter.model.yml` (1) - ServerFilters.CatchAll stack trace leak summary
+5. `http4k-multipart.model.yml` (16) - MultipartFormField, MultipartFormFile, MultipartEntity, MultipartFormBody sources and summaries
+6. `http4k-format.model.yml` (6) - AutoMarshalling.asA/stringAsA/asFormatString/convert summaries, Json.parse
+7. `http4k-realtime.model.yml` (6) - WsMessage body, SseMessage Data/Event sources
+8. `http4k-client.model.yml` (3) - DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks
+9. `http4k-template.model.yml` (2) - TemplatesKt.renderToResponse/then summaries
+
+**Dependency libraries:**
+10. `result4k.model.yml` (18) - dev.forkhandles:result4k Success/Failure/map/flatMap/valueOrNull summaries
+11. `handlebars.model.yml` (10) - com.github.jknack:handlebars Template.apply/compileInline sinks and summaries
 
 ## CodeQL MaD YAML Format Reference
 
@@ -328,6 +335,123 @@ doesn't detect the endpoint, investigate the model entry.
 - `java/log-injection` is NOT in CodeQL's default security suite
 - `java/js-injection` is NOT in CodeQL's default security suite — adding `js-injection` kind would duplicate `java/xss` alerts
 - Line number shifts from import changes can cause CodeQL to close and re-create alerts (not a real loss)
+
+## Dependency Models
+
+Beyond http4k's own API surface, we model key libraries that http4k depends on or that are
+commonly used alongside it. Without these, taint can silently break when data passes through
+unmodelled library calls.
+
+Current dependency model files:
+
+- `result4k.model.yml` — `dev.forkhandles:result4k` (18 summaries). Functional Result type used
+  in http4k core (oauth, lambda). Wrapping tainted data in `Success(input)` and unwrapping via
+  `.value`, `.map {}`, `.valueOrNull()` breaks taint without these summaries.
+- `handlebars.model.yml` — `com.github.jknack:handlebars` (10 entries). Template engine wrapped
+  by `http4k-template-handlebars`. `Template.apply` is an `html-injection` sink (XSS via context
+  data), `Handlebars.compileInline` is a `template-injection` sink (SSTI via user-controlled
+  template string).
+- `http4k-template.model.yml` — `org.http4k.template` (2 summaries). The http4k template
+  abstraction layer: `TemplatesKt.renderToResponse` propagates taint from ViewModel to Response.
+
+**Klaxon** (`com.beust.klaxon`) does NOT need a separate model file — `ConfigurableKlaxon`
+extends `AutoMarshalling`, which is already modelled in `http4k-format.model.yml` with
+`subtypes: true`.
+
+### When to add a new dependency model
+
+Add a model file for a library when:
+1. It is a declared dependency of http4k (check `../http4k/gradle/libs.versions.toml`)
+2. Tainted data passes through its APIs (wrappers, transformers, renderers)
+3. Without the model, CodeQL taint tracking breaks in the chain
+
+Do NOT model libraries that are:
+- Already covered by subtypes (e.g., Klaxon via AutoMarshalling)
+- Not http4k dependencies (e.g., krouton — third-party routing add-on, not in http4k's deps)
+- Application-specific internal libraries (e.g., OPA's anura-common)
+
+## Discovering Dependencies from Real-World Repos
+
+To improve model coverage, scan real-world http4k applications for libraries used alongside
+http4k where taint tracking could break. This is a two-phase process using different models
+to optimise token usage.
+
+### Phase 1: Discovery (use Haiku)
+
+Haiku is sufficient for this phase — the work is pattern matching and listing, not reasoning
+about taint semantics or MaD format.
+
+**Goal:** Identify libraries used alongside http4k that could carry tainted data.
+
+**How to search for real repos:**
+
+```bash
+# Search GitHub for repos using http4k (build files mentioning http4k dependency)
+gh search repos --language=Kotlin "http4k" --sort=stars --limit=20
+
+# Or search for code patterns in build files
+gh search code "http4k-core" --filename=build.gradle.kts --limit=50
+gh search code "http4k-core" --filename=build.gradle --limit=50
+gh search code "http4k-core" --filename=pom.xml --limit=50
+```
+
+**What to extract from each repo:**
+
+1. **Dependencies** — scan `build.gradle.kts`, `build.gradle`, `pom.xml`, or
+   `gradle/libs.versions.toml` for all non-test dependencies
+2. **Import patterns** — grep for import statements to find which libraries handle data
+   that also passes through http4k:
+   ```bash
+   # In the target repo, find imports that aren't http4k, kotlin stdlib, or java stdlib
+   grep -rh "^import " src/main/kotlin/ | sort -u | grep -v "org.http4k\|kotlin\.\|java\.\|javax\."
+   ```
+3. **Data flow patterns** — look for code where http4k request data is passed into
+   third-party library calls:
+   ```bash
+   # Find functions that take Request and use non-http4k libraries
+   grep -l "import org.http4k.core.Request" src/main/kotlin/**/*.kt | \
+     xargs grep -l "import com\.\|import io\.\|import dev\."
+   ```
+
+**Output format for discovery:** A simple table:
+
+| Library | Package | Used with http4k? | Taint-relevant APIs | Priority |
+|---------|---------|-------------------|---------------------|----------|
+| result4k | dev.forkhandles.result4k | Yes (wraps request data) | Success, map, valueOrNull | High |
+| arrow-core | arrow.core | Maybe (Either/Option wrappers) | Either.fold, Option.getOrNull | Medium |
+| exposed | org.jetbrains.exposed | Yes (SQL from request params) | Already built-in CodeQL sinks | Skip |
+
+### Phase 2: Modelling (use Sonnet)
+
+Sonnet is needed for this phase — it requires understanding MaD column semantics,
+Kotlin-to-JVM compilation rules, and taint propagation logic.
+
+**For each high-priority library from Phase 1:**
+
+1. **Locate the source** — check if it's in `../http4k/` (http4k dependency) or needs
+   external reference. Use Maven Central or GitHub to find the API.
+2. **Identify taint-relevant methods** — constructors that wrap data, accessors that extract
+   it, transformers that pass it through, and any methods that could be sinks.
+3. **Write the model file** — follow the naming convention: `<library-name>.model.yml` for
+   external libraries, `http4k-<module>.model.yml` for http4k modules.
+4. **Create test endpoints** — add the library as a dependency in `build.gradle.kts` and
+   create vulnerable routes exercising each modelled path.
+5. **Verify with CI** — push, check CodeQL alerts, update README and counts.
+
+**Verification questions for each candidate library:**
+- Does tainted data actually flow through this library's APIs? (Not just "is it imported")
+- Would CodeQL lose taint tracking without a model? (Check if it's a wrapper/transformer)
+- Is it already covered by an existing model with `subtypes: true`?
+- Is it a published library with stable APIs, or an internal/abandoned project?
+
+### Libraries already assessed
+
+| Library | Package | Status | Reason |
+|---------|---------|--------|--------|
+| result4k | `dev.forkhandles.result4k` | **Modelled** | http4k dependency, wraps tainted data in Result type |
+| handlebars | `com.github.jknack.handlebars` | **Modelled** | http4k template engine, renders user data to HTML |
+| klaxon | `com.beust.klaxon` | **Covered** | Extends AutoMarshalling (subtypes=true in http4k-format) |
+| krouton | `com.natpryce.krouton` | **Skipped** | Not an http4k dependency, abandoned (last release 2020) |
 
 ## Development Workflow
 
