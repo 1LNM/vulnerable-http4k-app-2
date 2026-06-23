@@ -1,16 +1,16 @@
 extensions:
   # ============================================================
-  # Summaries — http4k template abstraction taint propagation
+  # Sinks — http4k template abstraction
   # ============================================================
   - addsTo:
       pack: codeql/java-all
-      extensible: summaryModel
+      extensible: sinkModel
     data:
-      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+      # Columns: package, type, subtypes, name, signature, ext, INPUT, KIND, provenance
 
-      # --- TemplatesKt.renderToResponse — ViewModel data flows into Response ---
-      # Extension on TemplateRenderer (Function1). JVM args: Arg[0]=receiver, Arg[1]=ViewModel
-      - ["org.http4k.template", "TemplatesKt", false, "renderToResponse", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
-
-      # --- TemplatesKt.then — composes two renderers, taint flows through ---
-      - ["org.http4k.template", "TemplatesKt", false, "then", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # --- TemplateRenderer.renderToResponse(viewModel) — tainted ViewModel rendered to
+      #     the HTTP response body and sent to the browser = XSS.
+      #     Extension on TemplateRenderer (Function1); JVM args: Arg[0]=renderer, Arg[1]=viewModel.
+      #     Default params (status, contentType) make the call compile to renderToResponse$default. ---
+      - ["org.http4k.template", "TemplatesKt", false, "renderToResponse", "", "", "Argument[1]", "html-injection", "manual"]
+      - ["org.http4k.template", "TemplatesKt", false, "renderToResponse$default", "", "", "Argument[1]", "html-injection", "manual"]

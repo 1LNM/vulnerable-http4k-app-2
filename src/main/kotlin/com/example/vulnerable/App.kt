@@ -97,12 +97,30 @@ fun main() {
 
         // Result4k taint flow
         "/result4k/success" bind GET to ::result4kSuccessXss,
+        "/result4k/success-component1" bind GET to ::result4kSuccessComponent1,
+        "/result4k/failure-reason" bind GET to ::result4kFailureReason,
+        "/result4k/failure-component1" bind GET to ::result4kFailureComponent1,
+        "/result4k/as-success" bind GET to ::result4kAsSuccess,
+        "/result4k/as-failure" bind GET to ::result4kAsFailure,
         "/result4k/map" bind GET to ::result4kMapXss,
+        "/result4k/flatmap" bind GET to ::result4kFlatMap,
+        "/result4k/mapfailure" bind GET to ::result4kMapFailure,
+        "/result4k/flatmapfailure" bind GET to ::result4kFlatMapFailure,
+        "/result4k/recover" bind GET to ::result4kRecover,
+        "/result4k/onfailure" bind GET to ::result4kOnFailure,
+        "/result4k/peek" bind GET to ::result4kPeek,
+        "/result4k/peekfailure" bind GET to ::result4kPeekFailure,
         "/result4k/value-or-null" bind GET to ::result4kValueOrNullXss,
+        "/result4k/as-result-or" bind GET to ::result4kAsResultOr,
 
         // Handlebars template
         "/template/handlebars-xss" bind GET to ::handlebarsXss,
-        "/template/handlebars-ssti" bind GET to ::handlebarsSsti
+        "/template/handlebars-ssti" bind GET to ::handlebarsSsti,
+        "/template/handlebars-apply-writer" bind GET to ::handlebarsApplyWriter,
+        "/template/handlebars-apply-context" bind GET to ::handlebarsApplyContext,
+        "/template/handlebars-apply-context-map" bind GET to ::handlebarsApplyContextMap,
+        "/template/handlebars-compile-delims" bind GET to ::handlebarsCompileInlineDelims,
+        "/template/render-to-response" bind GET to ::templateRenderToResponse
     )
 
     val server = app.asServer(Netty(8080)).start()

@@ -28,7 +28,8 @@ extensions:
       # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
 
       # --- Context.combine — merges model data, preserving taint ---
-      - ["com.github.jknack.handlebars", "Context", true, "combine", "(Object)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # Real overloads (verified against jknack source): combine(String,Object) and combine(Map)
+      - ["com.github.jknack.handlebars", "Context", true, "combine", "(Map)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
       - ["com.github.jknack.handlebars", "Context", true, "combine", "(String,Object)", "", "Argument[1]", "ReturnValue", "taint", "manual"]
 
       # --- Template.apply — also a summary: taint flows from context to rendered string ---

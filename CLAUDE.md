@@ -26,7 +26,7 @@ Current model files (11 files, 186 entries):
 6. `http4k-format.model.yml` (6) - AutoMarshalling.asA/stringAsA/asFormatString/convert summaries, Json.parse
 7. `http4k-realtime.model.yml` (6) - WsMessage body, SseMessage Data/Event sources
 8. `http4k-client.model.yml` (3) - DualSyncAsyncHttpHandler/AsyncHttpHandler SSRF sinks
-9. `http4k-template.model.yml` (2) - TemplatesKt.renderToResponse/then summaries
+9. `http4k-template.model.yml` (2) - TemplatesKt.renderToResponse html-injection sink (and its `$default` variant)
 
 **Dependency libraries:**
 10. `result4k.model.yml` (18) - dev.forkhandles:result4k Success/Failure/map/flatMap/valueOrNull summaries
@@ -366,12 +366,16 @@ extends `AutoMarshalling`, which is already modelled in `http4k-format.model.yml
   Accepted here because the test app's purpose is detection coverage, and our test endpoint uses
   genuinely-unsafe `{{{this}}}`. A more precise model would only flag SafeString/triple-stache,
   which MaD cannot express.
-- **Some dependency entries are defensive (no test endpoint).** The result4k file models the full
-  Result API surface (Failure, asSuccess/asFailure, flatMap, recover, peek, etc.) but only a
-  subset (Success ctor, getValue, map, valueOrNull) is exercised by test endpoints. Similarly
-  `Context.combine` (handlebars) and `renderToResponse`/`then` (http4k-template) are unvalidated.
-  These are kept for resilience when scanning real apps; the README's detection rate counts only
-  paths that have endpoints, so unvalidated entries are not reflected there.
+- **Every model entry has a dedicated test endpoint.** Each result4k entry (Success/Failure
+  constructors, component1, asSuccess/asFailure, map/flatMap/mapFailure/flatMapFailure,
+  recover/onFailure/peek/peekFailure, valueOrNull/asResultOr) and each handlebars entry
+  (Template.apply overloads, compileInline overloads, Context.combine variants) is exercised by
+  its own endpoint with an **inline** `Response.body` sink — a shared sink helper would
+  consolidate multiple flows into a single alert, hiding per-entry validation.
+- **`renderToResponse` sink relies on ViewModel field flow.** The http4k-template sink fires only
+  if CodeQL propagates taint from a tainted constructor argument through the ViewModel object to
+  the `renderToResponse` call. This is the least certain entry to validate; if CI does not flag
+  `templateRenderToResponse`, the limitation is the field-flow tracking, not the model signature.
 
 ### When to add a new dependency model
 
