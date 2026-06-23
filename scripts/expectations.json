@@ -32,12 +32,18 @@
     {"rule": "java/xss", "file": "ComparisonPlanRoutes.kt", "count": 3, "why": "VERIFY: uriToString(1)+uriCopyThis(1)+uriCopyArg(1); multiFrom* and methodEcho do NOT fire — investigating"},
 
     {"rule": "java/xss", "file": "CommonsFileUploadRoutes.kt", "count": 4, "why": "NATIVE: CodeQL 2.24.0+ covers commons-fileupload natively — all 4 endpoints fire without custom models"},
-    {"rule": "java/server-side-template-injection", "file": "FreeMarkerRoutes.kt", "count": 1, "why": "NATIVE: CodeQL covers FreeMarker SSTI natively (1 of 2 SSTI endpoints); XSS via data model NOT tracked"}
+    {"rule": "java/server-side-template-injection", "file": "FreeMarkerRoutes.kt", "count": 1, "why": "NATIVE: CodeQL covers FreeMarker SSTI natively (1 of 2 SSTI endpoints); XSS via data model NOT tracked"},
+
+    {"rule": "java/xss", "file": "JsoupControlRoutes.kt", "count": 2, "why": "CONTROL: jsoupParseText + jsoupParseHtml — taint through parse/text/html summaries"},
+    {"rule": "java/xss", "file": "JacksonRoutes.kt", "count": 8, "why": "readTree→get/path/at/findValue/findPath + asText/textValue — one per endpoint"},
+    {"rule": "java/xss", "file": "JwtRoutes.kt", "count": 2, "why": "verify→getClaim→asString + asList"},
+    {"rule": "java/xss", "file": "ArrowRoutes.kt", "count": 3, "why": "fromNullable→orNull/getOrElse/map — one per endpoint"}
   ],
 
   "forbidden": [
     {"rule": "java/path-injection", "file": "SanitizerRoutes.kt", "why": "TREATMENT: identical to control except resolvedWithinRoot() barrier; must be suppressed"},
     {"rule": "java/http-response-splitting", "file": "ResponseSplittingRoutes.kt", "why": "http4k strips CR/LF in header() (sanitizeHeader->withoutCrLf); sink removed"},
-    {"rule": "java/http-response-splitting", "file": "RedirectRoutes.kt", "why": "same framework CR/LF sanitization"}
+    {"rule": "java/http-response-splitting", "file": "RedirectRoutes.kt", "why": "same framework CR/LF sanitization"},
+    {"rule": "java/xss", "file": "JsoupRoutes.kt", "why": "TREATMENT: Jsoup.clean(input, Safelist.none()) barrier strips HTML"}
   ]
 }

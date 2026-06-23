@@ -1,0 +1,22 @@
+extensions:
+  # ============================================================
+  # Summaries — Arrow-kt pre-1.0 Option type taint propagation
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- Option.fromNullable — wraps nullable value in Option ---
+      - ["arrow.core", "Option$Companion", false, "fromNullable", "(Object)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- Some.getValue — unwraps the contained value ---
+      - ["arrow.core", "Some", false, "getValue", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Option.orNull — unwraps to nullable ---
+      - ["arrow.core", "Option", true, "orNull", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Extension functions on Option (compiled to OptionKt static methods) ---
+      - ["arrow.core", "OptionKt", false, "getOrElse", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["arrow.core", "OptionKt", false, "map", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]

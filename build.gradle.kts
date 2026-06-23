@@ -24,6 +24,9 @@ dependencies {
     implementation("com.h2database:h2:2.2.224")
     implementation("org.freemarker:freemarker:2.3.31")
     implementation("commons-fileupload:commons-fileupload:1.5")
+    implementation("org.jsoup:jsoup:1.18.1")
+    implementation("com.auth0:java-jwt:4.4.0")
+    implementation("io.arrow-kt:arrow-core-data:0.12.1")
     implementation(kotlin("stdlib"))
 }
 

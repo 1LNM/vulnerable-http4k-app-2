@@ -1,0 +1,31 @@
+extensions:
+  # ============================================================
+  # Summaries — Jsoup parse/extract taint propagation
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- Jsoup.parse — HTML string to Document ---
+      - ["org.jsoup", "Jsoup", false, "parse", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      - ["org.jsoup", "Jsoup", false, "parseBodyFragment", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- Element accessors — taint flows from parsed document to extracted text ---
+      - ["org.jsoup.nodes", "Element", true, "text", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.jsoup.nodes", "Element", true, "html", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.jsoup.nodes", "Element", true, "outerHtml", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.jsoup.nodes", "Element", true, "ownText", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["org.jsoup.nodes", "Element", true, "data", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+  # ============================================================
+  # Barriers — Jsoup.clean sanitizes HTML (strips tags)
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: barrierModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, output, kind, provenance
+      - ["org.jsoup", "Jsoup", false, "clean", "(String,Safelist)", "", "ReturnValue", "html-injection", "manual"]
+      - ["org.jsoup", "Jsoup", false, "clean", "(String,String,Safelist)", "", "ReturnValue", "html-injection", "manual"]

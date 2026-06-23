@@ -1,0 +1,24 @@
+extensions:
+  # ============================================================
+  # Summaries — Jackson ObjectMapper.readTree + JsonNode traversal
+  # CodeQL natively covers ObjectMapper.readValue but NOT readTree/JsonNode
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- ObjectMapper.readTree — JSON string to JsonNode ---
+      - ["com.fasterxml.jackson.databind", "ObjectMapper", false, "readTree", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- JsonNode traversal — taint flows from node to child/value ---
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "get", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "get", "(int)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "path", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "path", "(int)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "at", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "findValue", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "findPath", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "asText", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.fasterxml.jackson.databind", "JsonNode", true, "textValue", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]

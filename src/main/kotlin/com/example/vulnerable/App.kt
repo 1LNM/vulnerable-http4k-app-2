@@ -140,7 +140,31 @@ fun main() {
         "/native/commons-upload-string" bind POST to ::commonsUploadGetString,
         "/native/commons-upload-name" bind POST to ::commonsUploadGetName,
         "/native/commons-upload-stream" bind POST to ::commonsUploadStream,
-        "/native/commons-upload-field" bind POST to ::commonsUploadFieldName
+        "/native/commons-upload-field" bind POST to ::commonsUploadFieldName,
+
+        // Jsoup — parse/text flow + clean barrier
+        "/jsoup/parse-text" bind GET to ::jsoupParseText,
+        "/jsoup/parse-html" bind GET to ::jsoupParseHtml,
+        "/jsoup/clean" bind GET to ::jsoupClean,
+
+        // Jackson JsonNode — readTree + traversal
+        "/jackson/readtree-get" bind POST to ::jacksonReadTreeGet,
+        "/jackson/get-int" bind POST to ::jacksonGetInt,
+        "/jackson/path" bind POST to ::jacksonPath,
+        "/jackson/path-int" bind POST to ::jacksonPathInt,
+        "/jackson/at" bind POST to ::jacksonAt,
+        "/jackson/find-value" bind POST to ::jacksonFindValue,
+        "/jackson/find-path" bind POST to ::jacksonFindPath,
+        "/jackson/text-value" bind POST to ::jacksonTextValue,
+
+        // Auth0 JWT — verify + claim extraction
+        "/jwt/claim-xss" bind GET to ::jwtClaimXss,
+        "/jwt/claim-list" bind GET to ::jwtClaimList,
+
+        // Arrow-kt Option — wrap/unwrap tainted data
+        "/arrow/option-ornull" bind GET to ::arrowOptionOrNull,
+        "/arrow/option-getorelse" bind GET to ::arrowOptionGetOrElse,
+        "/arrow/option-map" bind GET to ::arrowOptionMap
     )
 
     val server = app.asServer(Netty(8080)).start()

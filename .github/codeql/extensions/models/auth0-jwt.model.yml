@@ -1,0 +1,19 @@
+extensions:
+  # ============================================================
+  # Summaries — Auth0 java-jwt verify/claim extraction
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: summaryModel
+    data:
+      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+
+      # --- JWTVerifier.verify — token string to DecodedJWT ---
+      - ["com.auth0.jwt", "JWTVerifier", false, "verify", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+      # --- DecodedJWT.getClaim — extract claim by name ---
+      - ["com.auth0.jwt.interfaces", "DecodedJWT", true, "getClaim", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+
+      # --- Claim accessors — extract typed values ---
+      - ["com.auth0.jwt.interfaces", "Claim", true, "asString", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      - ["com.auth0.jwt.interfaces", "Claim", true, "asList", "(Class)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
