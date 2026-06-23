@@ -22,6 +22,8 @@ dependencies {
     implementation("org.http4k:http4k-template-handlebars:$http4kVersion")
     implementation("dev.forkhandles:result4k:2.25.6.0")
     implementation("com.h2database:h2:2.2.224")
+    implementation("org.freemarker:freemarker:2.3.31")
+    implementation("commons-fileupload:commons-fileupload:1.5")
     implementation(kotlin("stdlib"))
 }
 

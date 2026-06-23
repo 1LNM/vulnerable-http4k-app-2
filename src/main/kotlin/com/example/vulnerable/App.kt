@@ -131,7 +131,16 @@ fun main() {
         "/verify/uri-copy-this" bind GET to ::uriCopyThisXss,
         "/verify/uri-copy-arg" bind GET to ::uriCopyArgXss,
         "/verify/multi-from-factory" bind POST to ::multiFromFactoryXss,
-        "/verify/method-echo" bind GET to ::requestMethodEcho
+        "/verify/method-echo" bind GET to ::requestMethodEcho,
+
+        // Phase 1: Native coverage tests (no custom models)
+        "/native/freemarker-ssti" bind GET to ::freemarkerSsti,
+        "/native/freemarker-get-template" bind GET to ::freemarkerGetTemplate,
+        "/native/freemarker-data-xss" bind GET to ::freemarkerDataXss,
+        "/native/commons-upload-string" bind POST to ::commonsUploadGetString,
+        "/native/commons-upload-name" bind POST to ::commonsUploadGetName,
+        "/native/commons-upload-stream" bind POST to ::commonsUploadStream,
+        "/native/commons-upload-field" bind POST to ::commonsUploadFieldName
     )
 
     val server = app.asServer(Netty(8080)).start()

@@ -6,3 +6,7 @@ out/
 
 # Downloaded CodeQL scan results
 sarif-output/
+
+CLAUDE.md
+coverage_gaps.md
+PLAN.md
