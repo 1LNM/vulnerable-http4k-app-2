@@ -206,3 +206,24 @@ extensions:
 
       # --- UriTemplate.generate(Map) ---
       - ["org.http4k.core", "UriTemplate", false, "generate", "", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+
+  # ============================================================
+  # Neutrals — noise reduction for real-world scans
+  # Schema: package, type, name, signature, kind, provenance (NO subtypes/ext)
+  # kind = "summary" (no taint flow through) or "sink" (not a sink)
+  # ============================================================
+  - addsTo:
+      pack: codeql/java-all
+      extensible: neutralModel
+    data:
+      # Filter.invoke is internal request dispatch, not external SSRF — calling
+      # next(request) routes internally, it does not make an outgoing HTTP request.
+      - ["org.http4k.core", "Filter", "invoke", "(HttpHandler)", "summary", "manual"]
+
+      # Status code is not security-relevant data — don't track taint through it.
+      - ["org.http4k.core", "Response", "getStatus", "()", "summary", "manual"]
+      - ["org.http4k.core", "Response", "status", "(Status)", "summary", "manual"]
+
+      # HTTP method is a fixed enum, not injectable user data.
+      - ["org.http4k.core", "Request", "getMethod", "()", "summary", "manual"]
+      - ["org.http4k.core", "Request", "method", "(Method)", "summary", "manual"]

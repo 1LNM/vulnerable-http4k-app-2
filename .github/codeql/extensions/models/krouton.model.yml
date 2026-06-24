@@ -1,23 +1,29 @@
 extensions:
   # ============================================================
-  # Summaries — Krouton URL path extraction taint propagation
+  # Sources — Krouton URL path extraction.
+  # Modelled as sources (not summaries): the value a route handler receives from
+  # path extraction IS user input entering the app. This is more robust than a
+  # summary chain because the http4k-krouton dispatch machinery obscures the
+  # Uri -> parse connection (a summary needs the whole chain intact; a source does
+  # not). Matches the approach used in large real-world krouton codebases.
   # ============================================================
   - addsTo:
       pack: codeql/java-all
-      extensible: summaryModel
+      extensible: sourceModel
     data:
-      # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
+      # Columns: package, type, subtypes, name, signature, ext, OUTPUT, KIND, provenance
 
-      # --- PathElement.parsePathElement — parses individual path segment ---
+      # --- parsePathElement — extracts a typed value from a single path segment ---
       # The public `string`/`int`/etc. vals are VariablePathElement, which extends
-      # PathElement (NOT PathElementType — those are unrelated types that share a method
-      # name). Verified via javap: VariablePathElement<T> extends PathElement<T>, and
-      # PathElement declares abstract parsePathElement(String). subtypes:true covers
-      # VariablePathElement, LiteralPathElement, etc.
-      - ["com.natpryce.krouton", "PathElement", true, "parsePathElement", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # PathElement (verified via javap). PathElementType is a separate interface that
+      # also declares parsePathElement; model both to cover either access pattern.
+      - ["com.natpryce.krouton", "PathElement", true, "parsePathElement", "(String)", "", "ReturnValue", "remote", "manual"]
+      - ["com.natpryce.krouton", "PathElementType", true, "parsePathElement", "(String)", "", "ReturnValue", "remote", "manual"]
 
-      # --- parse — extension function, parses full path string against a template ---
-      # parse(PathTemplate<T>, String): T — the real-world route extraction entry point.
-      # Explicit signature to disambiguate from the parse(PathTemplate,List) overload.
-      # splitPath is internal; parse is the public API.
-      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "(PathTemplate,String)", "", "Argument[1]", "ReturnValue", "taint", "manual"]
+      # --- parse / parsePathElements — extract values from a full path against a template ---
+      # parse is an extension function (PathTemplateKt); also expose it on the PathTemplate
+      # receiver type, which is how real route handlers invoke it.
+      - ["com.natpryce.krouton", "PathTemplate", true, "parse", "(String)", "", "ReturnValue", "remote", "manual"]
+      - ["com.natpryce.krouton", "PathTemplate", true, "parse", "(List)", "", "ReturnValue", "remote", "manual"]
+      - ["com.natpryce.krouton", "PathTemplate", true, "parsePathElements", "(List)", "", "ReturnValue", "remote", "manual"]
+      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "(PathTemplate,String)", "", "ReturnValue", "remote", "manual"]

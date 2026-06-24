@@ -39,7 +39,7 @@
     {"rule": "java/xss", "file": "JwtRoutes.kt", "count": 2, "why": "verify→getClaim→asString + asList; getClaim modelled on Payload (declaring type), not DecodedJWT"},
     {"rule": "java/xss", "file": "ArrowRoutes.kt", "count": 2, "why": "fromNullable→orNull + getOrElse fire; map→orNull chain may not propagate"},
 
-    {"rule": "java/xss", "file": "KroutonRoutes.kt", "count": 2, "why": "parsePathElement x2 (string+int) on PathElement; parse(template,string) endpoint does NOT fire (known gap, summary kept for real-world coverage)"}
+    {"rule": "java/xss", "file": "KroutonRoutes.kt", "count": 2, "why": "krouton-as-sources: parsePathElement x2 (string+int) fire; parse(template,string) endpoint still does NOT fire (extension fn resolves on Kt class — source entries kept for real-world coverage)"}
   ],
 
   "forbidden": [
