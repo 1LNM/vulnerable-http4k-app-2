@@ -16,7 +16,8 @@ extensions:
       # VariablePathElement, LiteralPathElement, etc.
       - ["com.natpryce.krouton", "PathElement", true, "parsePathElement", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
-      # --- parse — top-level function, parses full path string against a template ---
+      # --- parse — extension function, parses full path string against a template ---
       # parse(PathTemplate<T>, String): T — the real-world route extraction entry point.
+      # Explicit signature to disambiguate from the parse(PathTemplate,List) overload.
       # splitPath is internal; parse is the public API.
-      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]
+      - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "(PathTemplate,String)", "", "Argument[1]", "ReturnValue", "taint", "manual"]
