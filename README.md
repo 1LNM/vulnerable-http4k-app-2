@@ -12,44 +12,34 @@ Test application for validating [CodeQL MaD (Models as Data)](https://codeql.git
 ## Project Structure
 
 ```
-CLAUDE.md                        # Modelling reference, design decisions, format docs
 scripts/
   check_findings.py             # Deterministic SARIF assertion harness (CI gate)
   expectations.json             # Expected (must-be-present) / forbidden (must-be-absent) findings
 .github/
-  codeql/extensions/models/     # 11 custom MaD model YAML files (by module/library)
+  codeql/extensions/models/     # 16 custom MaD model YAML files (by module/library)
   workflows/codeql.yml          # CodeQL CI workflow (build-mode: manual) + findings gate
 src/main/kotlin/com/example/vulnerable/
-  App.kt                        # Route registration (81 endpoints)
+  App.kt                        # Route registration (112 endpoints)
   model/UserInput.kt            # Data class for JSON deserialization tests
-  routes/
-    XssRoutes.kt                # 10 endpoints - reflected XSS
-    RedirectRoutes.kt           #  5 endpoints - open redirect
-    SsrfRoutes.kt               #  6 endpoints - server-side request forgery
-    PathInjectionRoutes.kt      #  2 endpoints - path traversal
-    SqlInjectionRoutes.kt       #  7 endpoints - SQL injection
-    CommandInjectionRoutes.kt   #  3 endpoints - command injection
-    MultipartRoutes.kt          #  2 endpoints - multipart source coverage
-    LensRoutes.kt               #  4 endpoints - lens extraction + injection chains
-    HeaderRoutes.kt             #  2 endpoints - auth header sources
-    UriRoutes.kt                #  2 endpoints - URI/RequestSource sources
-    MiscRoutes.kt               #  4 endpoints - parse, curl, params, JSON
-    ClientSsrfRoutes.kt         #  4 endpoints - HTTP client SSRF
-    LogInjectionRoutes.kt       #  3 endpoints - log injection
-    ResponseSplittingRoutes.kt  #  2 endpoints - framework-prevented splitting (negative)
-    Result4kRoutes.kt           # 16 endpoints - result4k taint flow (full API coverage)
-    TemplateRoutes.kt           #  7 endpoints - Handlebars template XSS/SSTI + http4k Templates
-    SanitizerControlRoutes.kt   #  1 endpoint  - barrier control (MUST alert)
-    SanitizerRoutes.kt          #  1 endpoint  - barrier treatment (MUST NOT alert)
+  routes/                       # 27 route files (one vulnerability family or library each)
 ```
+
+Route files group by what they exercise: core vulnerability families (`XssRoutes`,
+`RedirectRoutes`, `SsrfRoutes`, `ClientSsrfRoutes`, `PathInjectionRoutes`, `SqlInjectionRoutes`,
+`CommandInjectionRoutes`, `LogInjectionRoutes`, `MultipartRoutes`, `LensRoutes`, `HeaderRoutes`,
+`UriRoutes`, `MiscRoutes`); dependency-library coverage (`Result4kRoutes`, `TemplateRoutes`,
+`JsoupRoutes`/`JsoupControlRoutes`, `JacksonRoutes`, `JwtRoutes`, `ArrowRoutes`, `KroutonRoutes`,
+`FreeMarkerRoutes`, `CommonsFileUploadRoutes`); negative/barrier tests (`SanitizerRoutes`,
+`SanitizerControlRoutes`, `ResponseSplittingRoutes`); and model-verification probes
+(`ComparisonPlanRoutes`).
 
 ## Custom Model Files
 
-All 11 model files live in `.github/codeql/extensions/models/`, organized by module/library:
+All 16 model files live in `.github/codeql/extensions/models/`, organized by module/library:
 
 | File | Entries | Coverage |
 |------|---------|----------|
-| `http4k-core.model.yml` | 102 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, Uri.toString/copy summaries (response-splitting sink removed — http4k sanitizes CR/LF) |
+| `http4k-core.model.yml` | 109 | Request/Response/Uri/Body/Cookie/Credentials sources, sinks, summaries. Form data, cookie extensions, UriKt extensions, parser, curl, UriTemplate, SSRF sinks, Uri.toString/copy summaries, **neutrals** (Filter.invoke, getStatus, getMethod). Response-splitting sink removed — http4k sanitizes CR/LF |
 | `http4k-lens.model.yml` | 17 | LensExtractor sources, HeaderKt sinks (html-injection, url-redirection), LensInjector.inject sink, Lens/BodyLens/PathLens/LensInjector summaries |
 | `http4k-routing.model.yml` | 3 | ExtensionsKt.path source, ResourceLoader.load sink, **resolvedWithinRoot barrier** (path-injection sanitizer) |
 | `http4k-filter.model.yml` | 1 | ServerFilters.CatchAll stack trace leak |
@@ -60,14 +50,24 @@ All 11 model files live in `.github/codeql/extensions/models/`, organized by mod
 | `http4k-template.model.yml` | 2 | TemplatesKt.renderToResponse html-injection sink (+ `$default` variant) |
 | `handlebars.model.yml` | 10 | Template.apply sinks (html-injection), Handlebars.compileInline sink (template-injection), Context.combine/Template.apply/compileInline summaries |
 | `result4k.model.yml` | 18 | Success/Failure constructors and extractors, ResultKt map/flatMap/recover/peek, NullablesKt valueOrNull/asResultOr |
+| `jsoup.model.yml` | 9 | Jsoup.parse/parseBodyFragment + Element.text/html/outerHtml summaries, **Jsoup.clean barrier** (html sanitizer) |
+| `jackson.model.yml` | 10 | ObjectMapper.readTree + JsonNode get/path/at/findValue/asText/textValue summaries (CodeQL natively covers readValue, not these) |
+| `auth0-jwt.model.yml` | 4 | JWTVerifier.verify, Payload.getClaim, Claim.asString/asList summaries |
+| `arrow.model.yml` | 5 | Option.fromNullable/orNull/getOrElse/map, Some.getValue summaries |
+| `krouton.model.yml` | 6 | PathElement.parsePathElement, PathTemplate.parse/parsePathElements sources (URL path extraction) |
 
-**Total: 184 model entries** (5 source, 6 sink, 8 summary blocks, 1 barrier).
+**Total: 225 model entries** across sources, sinks, summaries, 2 barriers, and 5 neutrals.
+
+**Natively covered (no custom model needed):** `commons-fileupload` (`FileItem`/`FileItemStream`
+— CodeQL ≥ 2.24.0) and `FreeMarker` SSTI (`Template.process` / `Configuration.getTemplate` —
+Freemarker.qll). Both verified by dedicated test endpoints that fire without any custom model.
 
 ## Expected Findings
 
-74 distinct source-to-sink taint paths across 8 vulnerability categories (73 detected; 81 total
-CodeQL alerts), plus negative tests asserting barriers and framework sanitization suppress findings.
-The full alert set is locked down deterministically — see Deterministic Testing.
+Source-to-sink taint paths across core vulnerability categories plus a suite of dependency
+libraries, totalling **105 CodeQL alerts**, with negative tests asserting barriers and framework
+sanitization suppress findings. The full alert set is locked down deterministically — see
+Deterministic Testing.
 
 ### XSS (CWE-079) — core http4k — 20 paths
 
@@ -199,7 +199,7 @@ model error — analogous to the `uriRequestSource` / `miscCurl` exclusions.
 | cmdi-02 | cmdHeader | `Request.header()` | `Runtime.exec()` | Detected |
 | cmdi-03 | cmdBody | `Request.bodyString()` | `Runtime.exec()` | Detected |
 
-### Path Injection (CWE-022) — 3 paths
+### Path Injection (CWE-022) — 4 paths
 
 | ID | Function | Source | Sink | Status |
 |----|----------|--------|------|--------|
@@ -207,6 +207,24 @@ model error — analogous to the `uriRequestSource` / `miscCurl` exclusions.
 | path-02 | pathHeader | `Request.header()` | `ResourceLoader.load()` | Detected |
 | path-03 | multiFileName | `MultipartFormFile.getFilename()` | `ResourceLoader.load()` | Detected |
 | path-04 | pathControlUnsanitized | `Request.query()` | `ResourceLoader.load()` | Detected |
+
+### Dependency & Library Coverage
+
+Beyond http4k itself, libraries commonly used alongside it are modelled (or confirmed natively
+covered) so taint does not silently break when request data flows through them.
+
+| Library | File | Paths | Detected | Notes |
+|---------|------|-------|----------|-------|
+| Jackson `JsonNode` | JacksonRoutes.kt | 8 | 8 | `readTree` + `get/path/at/findValue/findPath/asText/textValue` (CodeQL natively covers `readValue`, not raw `JsonNode`) |
+| Jsoup | JsoupControlRoutes.kt | 2 | 2 | `parse → text` / `parseBodyFragment → html`; **`Jsoup.clean` barrier** suppresses the twin (negative test) |
+| Auth0 JWT | JwtRoutes.kt | 2 | 2 | `verify → getClaim → asString/asList`. `getClaim` is on `Payload`, not `DecodedJWT` (verified via javap) |
+| Arrow `Option` | ArrowRoutes.kt | 3 | 2 | `fromNullable → orNull/getOrElse`; the `map{} → orNull` chain does not propagate (lambda taint) |
+| Krouton | KroutonRoutes.kt | 3 | 2 | `parsePathElement` (string + int) as sources; `parse()` extension does not fire (resolves on the `Kt` class) |
+| commons-fileupload | CommonsFileUploadRoutes.kt | 4 | 4 | **Native** CodeQL coverage (≥ 2.24.0) — no custom model |
+| FreeMarker | FreeMarkerRoutes.kt | 2 | 1 | **Native** SSTI coverage; data-model → writer XSS path not tracked natively |
+
+`ComparisonPlanRoutes.kt` adds 3 model-verification probes (`Uri.toString`, `Uri.copy` receiver
+and argument taint) confirming those summaries fire.
 
 ### Negative Tests — Barriers & Framework Sanitization
 
@@ -225,35 +243,39 @@ The response-splitting case has no user-callable control because the sanitizatio
 
 ### Summary
 
-| Category | Paths | Detected |
-|----------|-------|----------|
-| XSS — core http4k | 20 | 20 |
-| XSS — result4k | 16 | 16 |
-| XSS — Handlebars | 5 | 4 (renderToResponse not detected — CodeQL field-flow) |
-| Redirect | 6 | 6 |
-| Template Injection | 2 | 2 |
-| SSRF | 6 | 6 |
-| Client SSRF | 4 | 4 |
-| SQL Injection | 8 | 8 |
-| Command Injection | 3 | 3 |
-| Path Injection | 4 | 4 |
-| **Total (positive paths)** | **74** | **73** |
+**105 CodeQL alerts** total, by rule (the exact per-(rule, file) baseline is in
+`scripts/expectations.json` and enforced by CI):
+
+| Rule | Alerts |
+|------|--------|
+| `java/xss` | 73 |
+| `java/ssrf` | 10 |
+| `java/unvalidated-url-redirection` | 7 |
+| `java/sql-injection` | 5 |
+| `java/path-injection` | 4 |
+| `java/server-side-template-injection` | 3 |
+| `java/command-line-injection` | 3 |
+| **Total** | **105** |
+
+The `java/xss` count spans core http4k reflection (29), result4k (16), Handlebars (7), the
+dependency libraries (Jackson 8, Jsoup 2, JWT 2, Arrow 2, Krouton 2, commons-fileupload 4), and
+model-verification probes (3) — including bonus XSS where SSRF/client endpoints echo user input
+into the response body.
 
 | Negative test | Expectation | Result |
 |---------------|-------------|--------|
 | `pathResolvedWithinRoot` | no `java/path-injection` (barrier) | Suppressed ✓ |
+| `jsoupClean` | no `java/xss` (Jsoup.clean barrier) | Suppressed ✓ |
 | `ResponseSplittingRoutes` / redirects | no `java/http-response-splitting` (framework CR/LF stripping) | Suppressed ✓ |
 
-73 of 74 positive paths detected (the lone gap, `renderToResponse`, is a CodeQL ViewModel
-field-flow limitation, not a model error). Both negative tests pass: the `resolvedWithinRoot`
-barrier suppresses path-injection while its identical control still alerts, and response-splitting
-is gone (http4k sanitizes CR/LF internally — those were false positives, category removed).
+Both barriers pass: each suppresses its finding while a byte-for-byte-identical control still
+alerts. Response-splitting is gone entirely (http4k sanitizes CR/LF internally — those were false
+positives, category removed).
 
-The scan emits **81 CodeQL alerts** total (paths plus bonus XSS on SSRF endpoints and double
-alerts where a Handlebars `apply` sink and its rendered-body summary both fire). The exact
-per-(rule, file) alert baseline is locked in `scripts/expectations.json` and enforced by CI.
-
-**Bonus findings:** CodeQL also detects secondary alerts from SSRF/client endpoints that echo user input in the response body (XSS). These are true positives not listed above.
+**Known non-firing entries** (model kept, documented): `renderToResponse` (CodeQL ViewModel
+field-flow), Arrow `map{} → orNull` (lambda taint), Krouton `parse()` (extension resolves on the
+`Kt` class), `uriRequestSource`/`miscCurl` (CodeQL receiver-taint limits). FreeMarker's
+data-model XSS path is also not natively tracked (SSTI is).
 
 **Log injection:** 3 test endpoints exist (LogInjectionRoutes.kt) but `java/log-injection` is not included in CodeQL's default security query suite. The endpoints validate that http4k sources flow into logging sinks if the query is enabled.
 
@@ -265,7 +287,7 @@ against `scripts/expectations.json`:
 
 It is a **closed-world** check over the whole alert set:
 
-- **`counts`** — exact number of alerts per `(rule, file)`. Every one of the 81 alerts is declared;
+- **`counts`** — exact number of alerts per `(rule, file)`. Every one of the 105 alerts is declared;
   a count that drifts (a path regresses 16→15, or a model stops firing) fails the build.
 - **`forbidden`** — `(rule, file)` pairs that must be zero (barriers / framework sanitization).
 - **undeclared findings** — any alert whose `(rule, file)` is not declared fails the build, so an
@@ -289,6 +311,12 @@ to reproduce the CI gate. When models/endpoints change, update the baseline coun
 - Kotlin extension functions compile to `<FileName>Kt` static methods; receiver is `Argument[0]`
 - Methods with default parameters compile to `$default` variants (e.g., `credentials$default`)
 - `Request(GET, url)` compiles to `Request$Companion.create$default`, not `invoke`
+- Model a method on its **declaring** type — e.g. JWT `getClaim` lives on `Payload`, not the
+  `DecodedJWT` subtype that calls it (use `javap` to find the declaring type)
+- Two types can share a method name without a subtype relation — krouton `PathElement` and
+  `PathElementType` both declare `parsePathElement`; only one matches a given call site
+- Some libraries are already covered natively (commons-fileupload ≥ 2.24.0, FreeMarker SSTI) —
+  test before writing a redundant model
 
 ## CI Workflow
 
