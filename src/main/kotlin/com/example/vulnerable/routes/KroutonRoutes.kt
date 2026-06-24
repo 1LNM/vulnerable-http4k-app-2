@@ -26,6 +26,10 @@ fun kroutonParseInt(request: Request): Response {
 // PathTemplate.parse(String) → T — real-world route extraction.
 // `string` is a VariablePathElement, which is a PathTemplate<String>.
 // parse is an extension function (compiles to PathTemplateKt.parse(PathTemplate, String)).
+// KNOWN GAP: this endpoint does NOT fire. The parse summary (Arg[1]->Return) is kept for
+// real-world coverage, but our synthetic single-element parse doesn't trigger CodeQL flow
+// (parse internally degenerates to splitPath -> parse(template, List)). The parsePathElement
+// primitive above (which parse delegates to) IS detected, so extraction is covered.
 fun kroutonParseTemplate(request: Request): Response {
     val input = request.query("segment") ?: "default"
     val parsed = `string`.parse(input)
