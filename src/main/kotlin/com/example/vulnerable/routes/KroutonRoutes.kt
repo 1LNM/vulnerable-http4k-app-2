@@ -23,11 +23,12 @@ fun kroutonParseInt(request: Request): Response {
         .body("<html>Parsed: $parsed</html>")
 }
 
-// parse(PathTemplate, String) → T — real-world route extraction.
+// PathTemplate.parse(String) → T — real-world route extraction.
 // `string` is a VariablePathElement, which is a PathTemplate<String>.
+// parse is an extension function (compiles to PathTemplateKt.parse(PathTemplate, String)).
 fun kroutonParseTemplate(request: Request): Response {
     val input = request.query("segment") ?: "default"
-    val parsed = parse(`string`, input)
+    val parsed = `string`.parse(input)
     return Response(Status.OK).header("Content-Type", "text/html")
         .body("<html>Parsed: $parsed</html>")
 }
