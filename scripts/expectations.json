@@ -39,7 +39,7 @@
     {"rule": "java/xss", "file": "JwtRoutes.kt", "count": 0, "why": "NOT DETECTED — verify→getClaim→asString chain not matching; needs type/package investigation"},
     {"rule": "java/xss", "file": "ArrowRoutes.kt", "count": 2, "why": "fromNullable→orNull + getOrElse fire; map→orNull chain may not propagate"},
 
-    {"rule": "java/xss", "file": "KroutonRoutes.kt", "count": 2, "why": "splitPath + parsePathElement — path extraction to body"}
+    {"rule": "java/xss", "file": "KroutonRoutes.kt", "count": 0, "why": "NOT DETECTED — VariablePathElement wraps PathElementType but doesn't implement it; needs type investigation"}
   ],
 
   "forbidden": [
