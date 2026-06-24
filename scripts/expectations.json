@@ -36,10 +36,10 @@
 
     {"rule": "java/xss", "file": "JsoupControlRoutes.kt", "count": 2, "why": "CONTROL: jsoupParseText + jsoupParseHtml — taint through parse/text/html summaries"},
     {"rule": "java/xss", "file": "JacksonRoutes.kt", "count": 8, "why": "readTree→get/path/at/findValue/findPath + asText/textValue — one per endpoint"},
-    {"rule": "java/xss", "file": "JwtRoutes.kt", "count": 0, "why": "NOT DETECTED — verify→getClaim→asString chain not matching; needs type/package investigation"},
+    {"rule": "java/xss", "file": "JwtRoutes.kt", "count": 2, "why": "verify→getClaim→asString + asList; getClaim modelled on Payload (declaring type), not DecodedJWT"},
     {"rule": "java/xss", "file": "ArrowRoutes.kt", "count": 2, "why": "fromNullable→orNull + getOrElse fire; map→orNull chain may not propagate"},
 
-    {"rule": "java/xss", "file": "KroutonRoutes.kt", "count": 0, "why": "NOT DETECTED — VariablePathElement wraps PathElementType but doesn't implement it; needs type investigation"}
+    {"rule": "java/xss", "file": "KroutonRoutes.kt", "count": 3, "why": "parsePathElement x2 (string+int) modelled on PathElement (not PathElementType) + parse(template,string)"}
   ],
 
   "forbidden": [

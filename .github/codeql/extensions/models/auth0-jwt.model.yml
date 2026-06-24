@@ -11,8 +11,11 @@ extensions:
       # --- JWTVerifier.verify — token string to DecodedJWT ---
       - ["com.auth0.jwt", "JWTVerifier", false, "verify", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
-      # --- DecodedJWT.getClaim — extract claim by name ---
-      - ["com.auth0.jwt.interfaces", "DecodedJWT", true, "getClaim", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
+      # --- Payload.getClaim — extract claim by name ---
+      # getClaim is declared on Payload (DecodedJWT extends Payload), NOT on DecodedJWT.
+      # Verified via javap: com.auth0.jwt.interfaces.Payload.getClaim(String). subtypes:true
+      # makes it apply when called through a DecodedJWT receiver.
+      - ["com.auth0.jwt.interfaces", "Payload", true, "getClaim", "(String)", "", "Argument[this]", "ReturnValue", "taint", "manual"]
 
       # --- Claim accessors — extract typed values ---
       - ["com.auth0.jwt.interfaces", "Claim", true, "asString", "()", "", "Argument[this]", "ReturnValue", "taint", "manual"]

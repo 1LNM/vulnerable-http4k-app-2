@@ -8,10 +8,15 @@ extensions:
     data:
       # Columns: package, type, subtypes, name, signature, ext, input, output, kind, provenance
 
-      # --- PathElementType.parsePathElement — parses individual path segment ---
-      # subtypes:true covers string, int, long etc. (VariablePathElement implements PathElementType)
-      - ["com.natpryce.krouton", "PathElementType", true, "parsePathElement", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
+      # --- PathElement.parsePathElement — parses individual path segment ---
+      # The public `string`/`int`/etc. vals are VariablePathElement, which extends
+      # PathElement (NOT PathElementType — those are unrelated types that share a method
+      # name). Verified via javap: VariablePathElement<T> extends PathElement<T>, and
+      # PathElement declares abstract parsePathElement(String). subtypes:true covers
+      # VariablePathElement, LiteralPathElement, etc.
+      - ["com.natpryce.krouton", "PathElement", true, "parsePathElement", "(String)", "", "Argument[0]", "ReturnValue", "taint", "manual"]
 
-      # --- parse — extension function on PathTemplate, parses full path string ---
-      # splitPath is internal; parse is the public API
+      # --- parse — top-level function, parses full path string against a template ---
+      # parse(PathTemplate<T>, String): T — the real-world route extraction entry point.
+      # splitPath is internal; parse is the public API.
       - ["com.natpryce.krouton", "PathTemplateKt", false, "parse", "", "", "Argument[1]", "ReturnValue", "taint", "manual"]

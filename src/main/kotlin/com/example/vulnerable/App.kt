@@ -168,7 +168,8 @@ fun main() {
 
         // Krouton — path element parsing
         "/krouton/parse-string" bind GET to ::kroutonParseString,
-        "/krouton/parse-int" bind GET to ::kroutonParseInt
+        "/krouton/parse-int" bind GET to ::kroutonParseInt,
+        "/krouton/parse-template" bind GET to ::kroutonParseTemplate
     )
 
     val server = app.asServer(Netty(8080)).start()

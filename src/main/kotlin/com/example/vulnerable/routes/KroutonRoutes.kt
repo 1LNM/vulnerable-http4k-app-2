@@ -2,11 +2,12 @@ package com.example.vulnerable.routes
 
 import com.natpryce.krouton.`string`
 import com.natpryce.krouton.`int`
+import com.natpryce.krouton.parse
 import org.http4k.core.*
 
-// Krouton path element parsing: exercises PathElementType.parsePathElement model
+// Krouton path extraction. `string`/`int` are VariablePathElement (extends PathElement).
 
-// string PathElementType: parsePathElement(String) → String
+// VariablePathElement.parsePathElement(String) → String  (overrides PathElement)
 fun kroutonParseString(request: Request): Response {
     val input = request.query("segment") ?: "default"
     val parsed = `string`.parsePathElement(input)
@@ -14,10 +15,19 @@ fun kroutonParseString(request: Request): Response {
         .body("<html>Parsed: $parsed</html>")
 }
 
-// int PathElementType: parsePathElement(String) → Int?
+// int element: parsePathElement(String) → Int?
 fun kroutonParseInt(request: Request): Response {
     val input = request.query("segment") ?: "0"
     val parsed = `int`.parsePathElement(input)
+    return Response(Status.OK).header("Content-Type", "text/html")
+        .body("<html>Parsed: $parsed</html>")
+}
+
+// parse(PathTemplate, String) → T — real-world route extraction.
+// `string` is a VariablePathElement, which is a PathTemplate<String>.
+fun kroutonParseTemplate(request: Request): Response {
+    val input = request.query("segment") ?: "default"
+    val parsed = parse(`string`, input)
     return Response(Status.OK).header("Content-Type", "text/html")
         .body("<html>Parsed: $parsed</html>")
 }
