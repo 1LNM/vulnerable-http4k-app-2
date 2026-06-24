@@ -166,9 +166,9 @@ fun main() {
         "/arrow/option-getorelse" bind GET to ::arrowOptionGetOrElse,
         "/arrow/option-map" bind GET to ::arrowOptionMap,
 
-        // Krouton — URL path extraction
-        "/krouton/users/{name}" bind GET to ::kroutonPathString,
-        "/krouton/parse-element" bind GET to ::kroutonParseElement
+        // Krouton — path element parsing
+        "/krouton/parse-string" bind GET to ::kroutonParseString,
+        "/krouton/parse-int" bind GET to ::kroutonParseInt
     )
 
     val server = app.asServer(Netty(8080)).start()
